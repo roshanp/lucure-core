@@ -5,8 +5,7 @@ Lucure provides Cell level security for Lucene. This means the user can only que
 
 The current implementation will save the Column Visibility as a _payload_ in the Lucene index.
 
-TODO
-----
+## TODO
 
 * Remove Accumulo dependency
 * Remove need to store the CV in the value of the stored field as well. Currently, we need to do this because the _RestrictedStoredFieldVisitor_ does not have access to the term payload.
@@ -14,8 +13,8 @@ TODO
 * Unit test
 * Test with non-term queries. Implement Phrase queries
 
-Index 
------
+##Index
+
 This section will provide a tutorial on how to index data with visibilities
 
 	Document document = new Document();
@@ -24,8 +23,8 @@ This section will provide a tutorial on how to index data with visibilities
     
 Use the _RestrictedField_ to attach the ColumnVisibility and save the _Document_
 
-Query
------ 
+## Query
+ 
 This section will provide a tutorial on how to query data with authorizations
 
 	IndexSearcher indexSearcher = new IndexSearcher(open);
@@ -38,3 +37,11 @@ This section will provide a tutorial on how to query data with authorizations
     TopDocs search = indexSearcher.search(booleanQuery, 10);
     
 Simply, just create an _AuthTermQuery_ with the correct _Authorizations_ and _Term_ and execute the query.
+
+### Query Parser
+
+Can use a Lucene typical Query Parser as well:
+
+	Authorizations authorizations = new Authorizations(EMPLOYEES_GROUP);
+    QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION, ADDRESS_FIELD, analyzer, authorizations);
+    Query query = parser.parse("Address");

@@ -3,7 +3,6 @@ package org.calrissian.lucure.core;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,15 +22,14 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.lucure.core.AuthTermQuery;
 import org.lucure.core.RestrictedField;
 import org.lucure.core.RestrictedStoredFieldVisitor;
@@ -39,6 +37,7 @@ import org.lucure.core.RestrictedStoredFieldVisitor;
 /**
  *
  */
+@RunWith(JUnit4.class)
 public class LucureFunctionalTests {
 
   public static final Version LUCENE_VERSION = Version.LUCENE_47;

@@ -30,9 +30,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.lucure.core.AuthTermQuery;
-import org.lucure.core.RestrictedField;
-import org.lucure.core.RestrictedStoredFieldVisitor;
 
 /**
  *

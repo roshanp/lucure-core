@@ -35,7 +35,7 @@ import org.junit.runners.JUnit4;
  *
  */
 @RunWith(JUnit4.class)
-public class LucureFunctionalTests {
+public class LucureFunctionalTest {
 
   public static final Version LUCENE_VERSION = Version.LUCENE_47;
 

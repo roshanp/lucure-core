@@ -12,8 +12,7 @@ TODO
 * Remove need to store the CV in the value of the stored field as well. Currently, we need to do this because the _RestrictedStoredFieldVisitor_ does not have access to the term payload.
 * Open RestrictedField to serve not just strings, but numeric values as well
 * Unit test
-* Implement a Query Parser that overloads all _TermQuery_ creation
-* Test with non-term queries
+* Test with non-term queries. Implement Phrase queries
 
 Index 
 -----

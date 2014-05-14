@@ -16,3 +16,5 @@ target/site/clover
 *.rpm
 *.class
 *.DS_Store
+pom.xml.tag
+pom.xml.next

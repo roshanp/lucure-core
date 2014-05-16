@@ -1,4 +1,4 @@
-package org.lucure.core;
+package com.bah.lucure.core;
 
 import java.io.IOException;
 

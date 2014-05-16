@@ -1,4 +1,4 @@
-package org.lucure.core;
+package com.bah.lucure.core;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

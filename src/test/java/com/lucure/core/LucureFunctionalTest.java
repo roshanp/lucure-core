@@ -1,4 +1,4 @@
-package com.bah.lucure.core;
+package com.lucure.core;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.lucure.core.codec.LucureCodec;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.lucene.analysis.Analyzer;
@@ -46,8 +47,8 @@ public class LucureFunctionalTest {
   public static final String EMPLOYEES_GROUP = "employees";
 
   //cvs
-  public static final ColumnVisibility ADMINS_CV =
-      new ColumnVisibility(ADMINS_GROUP);
+  public static final ColumnVisibility ADMINS_CV = new ColumnVisibility(
+      ADMINS_GROUP);
   public static final ColumnVisibility ADMINS_EMPLOYEES_CV =
       new ColumnVisibility(ADMINS_GROUP + "|" + EMPLOYEES_GROUP);
 
@@ -57,6 +58,7 @@ public class LucureFunctionalTest {
   public static final String PHONE_FIELD = "phone";
   public static final String SSN_FIELD = "ssn";
   public static final String EMPLOYEEID_FIELD = "id";
+  public static final String AGE_FIELD = "age";
 
   private static RAMDirectory ramDirectory;
   private static Analyzer analyzer;
@@ -67,29 +69,30 @@ public class LucureFunctionalTest {
     analyzer = new StandardAnalyzer(LUCENE_VERSION);
     IndexWriterConfig conf = new IndexWriterConfig(LUCENE_VERSION, analyzer);
     conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+    conf.setCodec(new LucureCodec());
     ramDirectory = new RAMDirectory();
 
     try (IndexWriter indexWriter = new IndexWriter(ramDirectory, conf)) {
-      indexWriter.addDocument(
-          createEmployee("John Doe", "1234 Temporary Address",
-              "Phone Number 1234", "SSN-1234", "ID-1234")
-      );
-      indexWriter.addDocument(
-          createEmployee("Jane Doe", "4321 Temporary Address",
-              "Phone Number 4321", "SSN-4321", "ID-4321")
-      );
-      indexWriter.addDocument(
-          createEmployee("Bob Wolowitz", "1 International Space Station", "NA",
-              "SSN-1", "ID-1")
-      );
-      indexWriter.addDocument(
-          createEmployee("Big CEO", "1 Blvd", "NA", "SSN-2", "ID-2"));
+      indexWriter.addDocument(createEmployee("John Doe",
+                                             "1234 Temporary Address",
+                                             "Phone Number 1234", "SSN-1234",
+                                             "ID-1234", 23));
+      indexWriter.addDocument(createEmployee("Jane Doe",
+                                             "4321 Temporary Address",
+                                             "Phone Number 4321", "SSN-4321",
+                                             "ID-4321", 35));
+      indexWriter.addDocument(createEmployee("Bob Wolowitz",
+                                             "1 International Space Station",
+                                             "NA", "SSN-1", "ID-1", 30));
+      indexWriter.addDocument(createEmployee("Big CEO", "1 Blvd", "NA", "SSN-2",
+                                             "ID-2", 45));
       indexWriter.commit();
     }
   }
 
-  static Document createEmployee(String name, String address, String phone,
-                                 String ssn, String id) {
+  static Document createEmployee(
+      String name, String address, String phone, String ssn, String id,
+      int age) {
     FieldType fieldType = new FieldType();
     fieldType.setIndexed(true);
     fieldType.setStored(true);
@@ -99,12 +102,13 @@ public class LucureFunctionalTest {
     Document document = new Document();
     document.add(new Field(NAME_FIELD, name, fieldType));
     document.add(new RestrictedField(ADDRESS_FIELD, address, fieldType,
-        ADMINS_EMPLOYEES_CV));
+                                     ADMINS_EMPLOYEES_CV));
     document.add(new RestrictedField(PHONE_FIELD, phone, fieldType,
-        ADMINS_EMPLOYEES_CV));
+                                     ADMINS_EMPLOYEES_CV));
     document.add(new RestrictedField(SSN_FIELD, ssn, fieldType, ADMINS_CV));
-    document
-        .add(new RestrictedField(EMPLOYEEID_FIELD, id, fieldType, ADMINS_CV));
+    document.add(new RestrictedField(EMPLOYEEID_FIELD, id, fieldType,
+                                     ADMINS_CV));
+    document.add(new RestrictedField(AGE_FIELD, age, fieldType, ADMINS_CV));
 
     return document;
   }
@@ -124,10 +128,9 @@ public class LucureFunctionalTest {
       Term unrestrictedTerm = new Term(NAME_FIELD, "doe");
       Authorizations authorizations = new Authorizations();
       BooleanQuery booleanQuery = new BooleanQuery();
-      booleanQuery.add(
-          new BooleanClause(new AuthTermQuery(unrestrictedTerm, authorizations),
-              BooleanClause.Occur.SHOULD)
-      );
+      booleanQuery.add(new BooleanClause(new AuthTermQuery(unrestrictedTerm,
+                                                           authorizations),
+                                         BooleanClause.Occur.SHOULD));
       TopDocs search = indexSearcher.search(booleanQuery, 10);
       ScoreDoc[] scoreDocs = search.scoreDocs;
       assertEquals(2, scoreDocs.length);
@@ -154,10 +157,9 @@ public class LucureFunctionalTest {
       Term restrictedTerm = new Term(ADDRESS_FIELD, "address");
       Authorizations authorizations = new Authorizations();
       BooleanQuery booleanQuery = new BooleanQuery();
-      booleanQuery.add(
-          new BooleanClause(new AuthTermQuery(restrictedTerm, authorizations),
-              BooleanClause.Occur.SHOULD)
-      );
+      booleanQuery.add(new BooleanClause(new AuthTermQuery(restrictedTerm,
+                                                           authorizations),
+                                         BooleanClause.Occur.SHOULD));
       TopDocs search = indexSearcher.search(booleanQuery, 10);
       ScoreDoc[] scoreDocs = search.scoreDocs;
       assertEquals(0, scoreDocs.length);
@@ -170,19 +172,18 @@ public class LucureFunctionalTest {
     try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
       IndexSearcher indexSearcher = new IndexSearcher(open);
       //Q: query for someone's address and name
-      //A: Since name is unrestricted, data should come back, but again no address field should be visible
+      //A: Since name is unrestricted, data should come back,
+      // but again no address field should be visible
       Term restrictedTerm = new Term(ADDRESS_FIELD, "address");
       Term unrestrictedTerm = new Term(NAME_FIELD, "doe");
       Authorizations authorizations = new Authorizations();
       BooleanQuery booleanQuery = new BooleanQuery();
-      booleanQuery.add(
-          new BooleanClause(new AuthTermQuery(restrictedTerm, authorizations),
-              BooleanClause.Occur.SHOULD)
-      );
-      booleanQuery.add(
-          new BooleanClause(new AuthTermQuery(unrestrictedTerm, authorizations),
-              BooleanClause.Occur.SHOULD)
-      );
+      booleanQuery.add(new BooleanClause(new AuthTermQuery(restrictedTerm,
+                                                           authorizations),
+                                         BooleanClause.Occur.SHOULD));
+      booleanQuery.add(new BooleanClause(new AuthTermQuery(unrestrictedTerm,
+                                                           authorizations),
+                                         BooleanClause.Occur.SHOULD));
       TopDocs search = indexSearcher.search(booleanQuery, 10);
       ScoreDoc[] scoreDocs = search.scoreDocs;
       assertEquals(2, scoreDocs.length);
@@ -208,10 +209,9 @@ public class LucureFunctionalTest {
       Term restrictedTerm = new Term(ADDRESS_FIELD, "address");
       Authorizations authorizations = new Authorizations(EMPLOYEES_GROUP);
       BooleanQuery booleanQuery = new BooleanQuery();
-      booleanQuery.add(
-          new BooleanClause(new AuthTermQuery(restrictedTerm, authorizations),
-              BooleanClause.Occur.SHOULD)
-      );
+      booleanQuery.add(new BooleanClause(new AuthTermQuery(restrictedTerm,
+                                                           authorizations),
+                                         BooleanClause.Occur.SHOULD));
       TopDocs search = indexSearcher.search(booleanQuery, 10);
       ScoreDoc[] scoreDocs = search.scoreDocs;
       assertEquals(2, scoreDocs.length);
@@ -223,7 +223,7 @@ public class LucureFunctionalTest {
         Document document = restrictedStoredFieldVisitor.getDocument();
         assertEquals(3, document.getFields().size());
         Set<String> names = new HashSet<>();
-        for(IndexableField field : document) {
+        for (IndexableField field : document) {
           names.add(field.name());
         }
         assertEquals(3, names.size());
@@ -242,9 +242,10 @@ public class LucureFunctionalTest {
       //Q: query for someone's address as employee
       //A: Since address is queryable as an employee, it should return
       Authorizations authorizations = new Authorizations(EMPLOYEES_GROUP);
-      QueryParser parser =
-          new AuthorizationsQueryParser(LUCENE_VERSION, ADDRESS_FIELD, analyzer,
-              authorizations);
+      QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
+                                                         ADDRESS_FIELD,
+                                                         analyzer,
+                                                         authorizations);
       Query query = parser.parse("Address");
 
       TopDocs search = indexSearcher.search(query, 10);
@@ -258,13 +259,52 @@ public class LucureFunctionalTest {
         Document document = restrictedStoredFieldVisitor.getDocument();
         assertEquals(3, document.getFields().size());
         Set<String> names = new HashSet<>();
-        for(IndexableField field : document) {
+        for (IndexableField field : document) {
           names.add(field.name());
         }
         assertEquals(3, names.size());
         assertTrue(names.contains(NAME_FIELD));
         assertTrue(names.contains(ADDRESS_FIELD));
         assertTrue(names.contains(PHONE_FIELD));
+      }
+    }
+  }
+
+  @Test
+  public void testAuths_queryRestrictedFieldWithParserAdmin() throws Exception {
+
+    try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
+      IndexSearcher indexSearcher = new IndexSearcher(open);
+      //Q: query for someone's address as employee
+      //A: Since address is queryable as an employee, it should return
+      Authorizations authorizations = new Authorizations(ADMINS_GROUP);
+      QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
+                                                         ADDRESS_FIELD,
+                                                         analyzer,
+                                                         authorizations);
+      Query query = parser.parse("Address");
+
+      TopDocs search = indexSearcher.search(query, 10);
+      ScoreDoc[] scoreDocs = search.scoreDocs;
+      assertEquals(2, scoreDocs.length);
+      //should only see the name field available though
+      for (ScoreDoc scoreDoc : scoreDocs) {
+        RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
+            new RestrictedStoredFieldVisitor(authorizations);
+        indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
+        Document document = restrictedStoredFieldVisitor.getDocument();
+        assertEquals(6, document.getFields().size());
+        Set<String> names = new HashSet<>();
+        for (IndexableField field : document) {
+          names.add(field.name());
+        }
+        assertEquals(6, names.size());
+        assertTrue(names.contains(NAME_FIELD));
+        assertTrue(names.contains(ADDRESS_FIELD));
+        assertTrue(names.contains(PHONE_FIELD));
+        assertTrue(names.contains(AGE_FIELD));
+        assertTrue(names.contains(SSN_FIELD));
+        assertTrue(names.contains(EMPLOYEEID_FIELD));
       }
     }
   }
@@ -277,14 +317,15 @@ public class LucureFunctionalTest {
       //Q: query for someone's address
       //A: Since address is a restricted field, nothing should return
       Authorizations authorizations = new Authorizations();
-      QueryParser parser =
-          new AuthorizationsQueryParser(LUCENE_VERSION, ADDRESS_FIELD, analyzer,
-              authorizations);
+      QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
+                                                         ADDRESS_FIELD,
+                                                         analyzer,
+                                                         authorizations);
       Query query = parser.parse("\"Temporary Address\"");
       TopDocs search = indexSearcher.search(query, 10);
       ScoreDoc[] scoreDocs = search.scoreDocs;
       //TODO: Phrase queries should not be returning anything, but this test returns 2
-//      assertEquals(0, scoreDocs.length);
+      //      assertEquals(0, scoreDocs.length);
     }
   }
 }

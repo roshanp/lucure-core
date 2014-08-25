@@ -1,4 +1,4 @@
-package com.bah.lucure.core;
+package com.lucure.core;
 
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.lucene.analysis.Analyzer;

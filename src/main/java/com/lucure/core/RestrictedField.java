@@ -1,4 +1,4 @@
-package com.bah.lucure.core;
+package com.lucure.core;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -13,8 +13,6 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.util.BytesRef;
 
 public class RestrictedField extends Field {
-
-  public static final char DELIM = '\u0000';
 
   public final class ColumnVisibilityPayloadFilter extends TokenFilter {
     private final PayloadAttribute payAtt =
@@ -40,24 +38,16 @@ public class RestrictedField extends Field {
   }
 
   private final ColumnVisibility columnVisibility;
-  private final String columnVisibilityStr;
 
-  public RestrictedField(String name, String value, FieldType type,
+  public RestrictedField(String name, Object value, FieldType type,
                          ColumnVisibility columnVisibility) {
-    super(name, value, type);
+    super(name, type);
+    this.fieldsData = value;
     this.columnVisibility = columnVisibility;
-    this.columnVisibilityStr = new String(columnVisibility.getExpression(), Charset.forName("UTF-8"));
   }
 
   public ColumnVisibility getColumnVisibility() {
     return columnVisibility;
-  }
-
-  @Override
-  public String stringValue() {
-    //for the stored field visitor to parse based on CV, the stored field value
-    //must have the CV
-    return super.stringValue() + DELIM + columnVisibilityStr;
   }
 
   @Override

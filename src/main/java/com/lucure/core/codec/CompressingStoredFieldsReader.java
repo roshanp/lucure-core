@@ -17,7 +17,7 @@ package com.lucure.core.codec;
  * limitations under the License.
  */
 
-import com.lucure.core.RestrictedStoredFieldVisitor;
+import com.lucure.core.AuthorizationsHolder;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.CodecUtil;
@@ -362,11 +362,12 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
         }
 
         boolean hasAccess = true;
-        if(visitor instanceof RestrictedStoredFieldVisitor && cv != null) {
-            RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-              (RestrictedStoredFieldVisitor) visitor;
+        if(cv != null) {
             try {
-                hasAccess = restrictedStoredFieldVisitor.hasAccess(cv);
+                hasAccess = AuthorizationsHolder.threadAuthorizations.get()
+                                                                     .getVisibilityEvaluator()
+                                                                     .evaluate(
+                                                                       cv);
             } catch (VisibilityParseException e) {
                 throw new IOException("Exception occurred parsing Column Visibility[" + cv + "]", e);
             }

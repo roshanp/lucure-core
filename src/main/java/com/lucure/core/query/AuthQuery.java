@@ -1,5 +1,6 @@
 package com.lucure.core.query;
 
+import com.lucure.core.AuthorizationsHolder;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
@@ -17,23 +18,16 @@ import java.util.Set;
  */
 public class AuthQuery extends Query {
 
-    public static final ThreadLocal<Authorizations> threadAuthorizations =
-      new ThreadLocal<Authorizations>() {
-          @Override protected Authorizations initialValue() {
-              return new Authorizations();
-          }
-      };
-
     private static class AuthWeight extends Weight {
 
         private final Weight weight;
         private final AuthQuery authQuery;
-        private final Authorizations authorizations;
+        private final AuthorizationsHolder authorizationsHolder;
 
         private AuthWeight(Weight weight, AuthQuery authQuery, Authorizations authorizations) {
             this.weight = weight;
             this.authQuery = authQuery;
-            this.authorizations = authorizations;
+            this.authorizationsHolder = new AuthorizationsHolder(authorizations);
         }
 
         @Override
@@ -65,109 +59,110 @@ public class AuthQuery extends Query {
         @Override
         public Scorer scorer(
           AtomicReaderContext context, Bits acceptDocs) throws IOException {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             Scorer scorer = weight.scorer(context, acceptDocs);
             if(scorer == null) {
                 return null;
             }
 
-            return new AuthScorer(scorer, this, authorizations);
+            return new AuthScorer(scorer, this, authorizationsHolder);
         }
 
         @Override
         public BulkScorer bulkScorer(
           AtomicReaderContext context, boolean scoreDocsInOrder,
           Bits acceptDocs) throws IOException {
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             BulkScorer bulkScorer = super.bulkScorer(context, scoreDocsInOrder,
                                                      acceptDocs);
             if(bulkScorer == null) {
                 return null; //no docs
             }
 
-            return new BulkAuthScorer(bulkScorer, authorizations);
+            return new BulkAuthScorer(bulkScorer, authorizationsHolder);
         }
     }
 
     private static class AuthScorer extends Scorer {
 
         private final Scorer scorer;
-        private final Authorizations authorizations;
+        private final AuthorizationsHolder authorizationsHolder;
 
         private AuthScorer(
-          Scorer scorer, Weight weight, Authorizations authorizations) {
+          Scorer scorer, Weight weight, AuthorizationsHolder authorizationsHolder) {
             super(weight);
             this.scorer = scorer;
-            this.authorizations = authorizations;
+            this.authorizationsHolder = authorizationsHolder;
         }
 
         @Override
         public float score() throws IOException {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.score();
         }
 
         @Override
         public Weight getWeight() {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.getWeight();
         }
 
         @Override
         public Collection<ChildScorer> getChildren() {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.getChildren();
         }
 
         @Override
         public int freq() throws IOException {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.freq();
         }
 
         @Override
         public AttributeSource attributes() {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.attributes();
         }
 
         @Override
         public int docID() {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.docID();
         }
 
         @Override
         public int nextDoc() throws IOException {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.nextDoc();
         }
 
         @Override
         public int advance(int target) throws IOException {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.advance(target);
         }
 
         @Override
         public long cost() {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return scorer.cost();
         }
     }
 
     private static class BulkAuthScorer extends BulkScorer{
         private final BulkScorer bulkScorer;
-        private final Authorizations authorizations;
+        private final AuthorizationsHolder authorizationsHolder;
 
         private BulkAuthScorer(
-          BulkScorer bulkScorer, Authorizations authorizations) {
+          BulkScorer bulkScorer, AuthorizationsHolder authorizationsHolder) {
             this.bulkScorer = bulkScorer;
-            this.authorizations = authorizations;
+            this.authorizationsHolder = authorizationsHolder;
         }
 
         @Override
         public boolean score(Collector collector, int max) throws IOException {
-            threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
             return bulkScorer.score(collector, max);
         }
     }

@@ -1,7 +1,6 @@
 package com.lucure.core;
 
 import com.lucure.core.codec.LucureCodec;
-import com.lucure.core.query.AuthQuery;
 import com.lucure.core.query.AuthorizationsQueryParser;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;
@@ -128,7 +127,7 @@ public class LucureFunctionalTest {
     public void testNoAuths_queryUnrestrictedField() throws Exception {
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's name
             //A: Should return docs since name is not restrictured
             Term unrestrictedTerm = new Term(NAME_FIELD, "doe");
@@ -141,10 +140,8 @@ public class LucureFunctionalTest {
 
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor();
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      new Authorizations());
                 assertEquals(1, document.getFields().size());
                 assertEquals(NAME_FIELD, document.getFields().get(0).name());
             }
@@ -154,7 +151,7 @@ public class LucureFunctionalTest {
     @Test
     public void testNoAuths_queryUnrestrictedFieldMatchAll() throws Exception {
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's name
             //A: Should return docs since name is not restrictured
             Authorizations authorizations = new Authorizations();
@@ -164,10 +161,8 @@ public class LucureFunctionalTest {
 
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor(authorizations);
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
                 assertEquals(1, document.getFields().size());
                 assertEquals(NAME_FIELD, document.getFields().get(0).name());
             }
@@ -186,7 +181,8 @@ public class LucureFunctionalTest {
             BooleanQuery booleanQuery = new BooleanQuery();
             booleanQuery.add(new BooleanClause(new TermQuery(restrictedTerm),
                                                BooleanClause.Occur.SHOULD));
-            AuthQuery.threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(
+              new AuthorizationsHolder(authorizations));
             TopDocs search = indexSearcher.search(booleanQuery, 10);
             ScoreDoc[] scoreDocs = search.scoreDocs;
             assertEquals(0, scoreDocs.length);
@@ -217,7 +213,8 @@ public class LucureFunctionalTest {
             BooleanQuery booleanQuery = new BooleanQuery();
             booleanQuery.add(new BooleanClause(new TermQuery(descriptionTerm),
                                                BooleanClause.Occur.SHOULD));
-            AuthQuery.threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(
+              new AuthorizationsHolder(authorizations));
             TopDocs search = indexSearcher.search(booleanQuery, 10);
             ScoreDoc[] scoreDocs = search.scoreDocs;
             assertEquals(expected, scoreDocs.length);
@@ -228,7 +225,7 @@ public class LucureFunctionalTest {
     public void testNoAuths_queryMultipleFields() throws Exception {
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's address and name
             //A: Since name is unrestricted, data should come back,
             // but again no address field should be visible
@@ -240,16 +237,15 @@ public class LucureFunctionalTest {
                                                BooleanClause.Occur.SHOULD));
             booleanQuery.add(new BooleanClause(new TermQuery(unrestrictedTerm),
                                                BooleanClause.Occur.SHOULD));
-            AuthQuery.threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(
+              new AuthorizationsHolder(authorizations));
             TopDocs search = indexSearcher.search(booleanQuery, 10);
             ScoreDoc[] scoreDocs = search.scoreDocs;
             assertEquals(2, scoreDocs.length);
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor(authorizations);
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
                 assertEquals(1, document.getFields().size());
                 assertEquals(NAME_FIELD, document.getFields().get(0).name());
             }
@@ -260,7 +256,7 @@ public class LucureFunctionalTest {
     public void testNoAuths_queryTopDocsCollector() throws Exception {
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's address and name
             //A: Since name is unrestricted, data should come back,
             // but again no address field should be visible
@@ -272,7 +268,8 @@ public class LucureFunctionalTest {
                                                BooleanClause.Occur.SHOULD));
             booleanQuery.add(new BooleanClause(new TermQuery(unrestrictedTerm),
                                                BooleanClause.Occur.SHOULD));
-            AuthQuery.threadAuthorizations.set(authorizations);
+            AuthorizationsHolder.threadAuthorizations.set(
+              new AuthorizationsHolder(authorizations));
             TopScoreDocCollector topScoreDocCollector =
               TopScoreDocCollector.create(10, true);
             indexSearcher.search(booleanQuery, topScoreDocCollector);
@@ -281,10 +278,8 @@ public class LucureFunctionalTest {
             assertEquals(2, scoreDocs.length);
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor(authorizations);
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
                 assertEquals(1, document.getFields().size());
                 assertEquals(NAME_FIELD, document.getFields().get(0).name());
             }
@@ -295,7 +290,7 @@ public class LucureFunctionalTest {
     public void testAuths_queryRestrictedField() throws Exception {
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's address as employee
             //A: Since address is queryable as an employee, it should return
             Term restrictedTerm = new Term(ADDRESS_FIELD, "address");
@@ -303,16 +298,13 @@ public class LucureFunctionalTest {
             BooleanQuery booleanQuery = new BooleanQuery();
             booleanQuery.add(new BooleanClause(new TermQuery(restrictedTerm),
                                                BooleanClause.Occur.SHOULD));
-            AuthQuery.threadAuthorizations.set(authorizations);
-            TopDocs search = indexSearcher.search(booleanQuery, 10);
+            TopDocs search = indexSearcher.search(booleanQuery, 10, authorizations);
             ScoreDoc[] scoreDocs = search.scoreDocs;
             assertEquals(2, scoreDocs.length);
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor(authorizations);
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
                 assertEquals(3, document.getFields().size());
                 Set<String> names = new HashSet<>();
                 for (IndexableField field : document) {
@@ -330,7 +322,7 @@ public class LucureFunctionalTest {
     public void testAuths_queryRestrictedFieldWithParser() throws Exception {
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's address as employee
             //A: Since address is queryable as an employee, it should return
             Authorizations authorizations = new Authorizations(EMPLOYEES_GROUP);
@@ -345,10 +337,8 @@ public class LucureFunctionalTest {
             assertEquals(2, scoreDocs.length);
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor(authorizations);
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
                 assertEquals(3, document.getFields().size());
                 Set<String> names = new HashSet<>();
                 for (IndexableField field : document) {
@@ -367,7 +357,7 @@ public class LucureFunctionalTest {
       throws Exception {
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
-            IndexSearcher indexSearcher = new IndexSearcher(open);
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
             //Q: query for someone's address as employee
             //A: Since address is queryable as an employee, it should return
             Authorizations authorizations = new Authorizations(ADMINS_GROUP);
@@ -382,10 +372,8 @@ public class LucureFunctionalTest {
             assertEquals(2, scoreDocs.length);
             //should only see the name field available though
             for (ScoreDoc scoreDoc : scoreDocs) {
-                RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  new RestrictedStoredFieldVisitor(authorizations);
-                indexSearcher.doc(scoreDoc.doc, restrictedStoredFieldVisitor);
-                Document document = restrictedStoredFieldVisitor.getDocument();
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
                 assertEquals(7, document.getFields().size());
                 Set<String> names = new HashSet<>();
                 for (IndexableField field : document) {

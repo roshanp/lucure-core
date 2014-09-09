@@ -18,7 +18,7 @@ package com.lucure.core.codec;
  */
 
 
-import com.lucure.core.query.AuthQuery;
+import com.lucure.core.AuthorizationsHolder;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.security.VisibilityEvaluator;
@@ -26,7 +26,6 @@ import org.apache.accumulo.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.BlockTermState;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.PostingsReaderBase;
-import org.apache.lucene.codecs.lucene41.Lucene41PostingsWriter;
 import org.apache.lucene.index.*;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
 import org.apache.lucene.store.DataInput;
@@ -61,9 +60,9 @@ public final class LucurePostingsReader extends PostingsReaderBase {
           DocsAndPositionsEnum docsAndPositionsEnum) {
             this.docsAndPositionsEnum = docsAndPositionsEnum;
 
-            Authorizations authorizations =
-              AuthQuery.threadAuthorizations.get();
-            this.visibilityEvaluator = new VisibilityEvaluator(authorizations);
+            this.visibilityEvaluator =
+              AuthorizationsHolder.threadAuthorizations.get()
+                                                       .getVisibilityEvaluator();
         }
 
         @Override

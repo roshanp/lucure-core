@@ -7,6 +7,7 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.util.BytesRef;
 
 import java.io.IOException;
@@ -43,6 +44,21 @@ public class RestrictedField extends Field {
     super(name, type);
     this.fieldsData = value;
     this.columnVisibility = columnVisibility;
+  }
+
+  public RestrictedField(Field field, ColumnVisibility columnVisibility) {
+    super(field.name(), field.fieldType());
+      this.fieldsData = field.readerValue();
+      if(this.fieldsData == null) {
+          this.fieldsData = field.numericValue();
+          if (this.fieldsData == null) {
+              this.fieldsData = field.binaryValue();
+              if (this.fieldsData == null) {
+                  this.fieldsData = field.stringValue();
+              }
+          }
+      }
+      this.columnVisibility = columnVisibility;
   }
 
   public ColumnVisibility getColumnVisibility() {

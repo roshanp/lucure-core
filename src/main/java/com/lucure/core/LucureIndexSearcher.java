@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
+import static com.lucure.core.AuthorizationsHolder.threadAuthorizations;
+
 /**
  */
 public class LucureIndexSearcher extends IndexSearcher {
@@ -34,8 +36,8 @@ public class LucureIndexSearcher extends IndexSearcher {
     }
 
     public Document doc(int docID, Authorizations authorizations) throws IOException {
-        AuthorizationsHolder.threadAuthorizations.set(new AuthorizationsHolder(authorizations));
-        return doc(docID);
+        threadAuthorizations.set(new AuthorizationsHolder(authorizations));
+        return doc(docID, (Set<String>) null, authorizations);
     }
 
     /**
@@ -43,8 +45,9 @@ public class LucureIndexSearcher extends IndexSearcher {
      * @see IndexReader#document(int, org.apache.lucene.index.StoredFieldVisitor)
      */
     public void doc(int docID, StoredFieldVisitor fieldVisitor, Authorizations authorizations) throws IOException {
-        AuthorizationsHolder.threadAuthorizations.set(new AuthorizationsHolder(authorizations));
-        doc(docID, fieldVisitor);
+        AuthorizationsHolder authorizationsHolder = new AuthorizationsHolder(authorizations);
+        threadAuthorizations.set(authorizationsHolder);
+        super.doc(docID, new DelegatingRestrictedFieldVisitor(fieldVisitor, authorizationsHolder.getVisibilityEvaluator()));
     }
 
     /**
@@ -52,11 +55,33 @@ public class LucureIndexSearcher extends IndexSearcher {
      * @see IndexReader#document(int, java.util.Set)
      */
     public Document doc(int docID, Set<String> fieldsToLoad, Authorizations authorizations) throws IOException {
-        AuthorizationsHolder.threadAuthorizations.set(new AuthorizationsHolder(authorizations));
-        return doc(docID, fieldsToLoad);
+        AuthorizationsHolder authorizationsHolder = new AuthorizationsHolder(authorizations);
+        threadAuthorizations.set(authorizationsHolder);
+        RestrictedDocumentStoredFieldVisitor documentStoredFieldVisitor =
+          new RestrictedDocumentStoredFieldVisitor(fieldsToLoad,
+                                                   authorizationsHolder
+                                                     .getVisibilityEvaluator());
+        super.doc(docID, documentStoredFieldVisitor);
+        return documentStoredFieldVisitor.getDocument();
     }
 
-    
+    @Override
+    public Document doc(int docID) throws IOException {
+        return doc(docID, threadAuthorizations.get().getAuthorizations());
+    }
+
+    @Override
+    public void doc(
+      int docID, StoredFieldVisitor fieldVisitor) throws IOException {
+        doc(docID, fieldVisitor, threadAuthorizations.get().getAuthorizations());
+    }
+
+    @Override
+    public Document doc(
+      int docID, Set<String> fieldsToLoad) throws IOException {
+        return doc(docID, fieldsToLoad, threadAuthorizations.get().getAuthorizations());
+    }
+
     public TopDocs searchAfter(
       ScoreDoc after, Query query, int n, Authorizations authorizations) throws IOException {
         return super.searchAfter(after, new AuthQuery(query, authorizations), n);

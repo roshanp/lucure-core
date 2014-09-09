@@ -18,7 +18,10 @@ package com.lucure.core.codec;
  */
 
 import com.lucure.core.AuthorizationsHolder;
+import com.lucure.core.DelegatingRestrictedFieldVisitor;
+import com.lucure.core.RestrictedStoredFieldVisitor;
 import org.apache.accumulo.core.security.ColumnVisibility;
+import org.apache.accumulo.core.security.VisibilityEvaluator;
 import org.apache.accumulo.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.StoredFieldsReader;
@@ -172,36 +175,37 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
   }
 
   private static void readField(
-          DataInput in, StoredFieldVisitor visitor, FieldInfo info, int bits) throws IOException {
+    DataInput in, RestrictedStoredFieldVisitor visitor, FieldInfo info,
+    int bits, ColumnVisibility columnVisibility) throws IOException {
 
     switch (bits & TYPE_MASK) {
       case BYTE_ARR:
         int length = in.readVInt();
         byte[] data = new byte[length];
         in.readBytes(data, 0, length);
-        visitor.binaryField(info, data);
+        visitor.binaryField(info, data, columnVisibility);
         break;
       case STRING:
         length = in.readVInt();
         data = new byte[length];
         in.readBytes(data, 0, length);
-        visitor.stringField(info, new String(data, IOUtils.CHARSET_UTF_8));
+        visitor.stringField(info, new String(data, IOUtils.CHARSET_UTF_8), columnVisibility);
         break;
       case NUMERIC_INT:
           int intValue = in.readInt();
-          visitor.intField(info, intValue);
+          visitor.intField(info, intValue, columnVisibility);
         break;
       case NUMERIC_FLOAT:
           float floatValue = Float.intBitsToFloat(in.readInt());
-          visitor.floatField(info, floatValue);
+          visitor.floatField(info, floatValue, columnVisibility);
         break;
       case NUMERIC_LONG:
           long longValue = in.readLong();
-          visitor.longField(info, longValue);
+          visitor.longField(info, longValue, columnVisibility);
         break;
       case NUMERIC_DOUBLE:
           double doubleValue = Double.longBitsToDouble(in.readLong());
-          visitor.doubleField(info, doubleValue);
+          visitor.doubleField(info, doubleValue, columnVisibility);
         break;
       default:
         throw new AssertionError("Unknown type flag: " + Integer.toHexString(bits));
@@ -352,7 +356,7 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       assert bits <= NUMERIC_DOUBLE: "bits=" + Integer.toHexString(bits);
 
         //get restricted
-        ColumnVisibility cv = null;
+        ColumnVisibility cv = RestrictedStoredFieldVisitor.EMPTY;
         boolean isRestricted = documentInput.readByte() == 1;
         if(isRestricted) {
             int cv_length = documentInput.readVInt();
@@ -361,24 +365,18 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
             cv = new ColumnVisibility(cv_bytes);
         }
 
-        boolean hasAccess = true;
-        if(cv != null) {
-            try {
-                hasAccess = AuthorizationsHolder.threadAuthorizations.get()
-                                                                     .getVisibilityEvaluator()
-                                                                     .evaluate(
-                                                                       cv);
-            } catch (VisibilityParseException e) {
-                throw new IOException("Exception occurred parsing Column Visibility[" + cv + "]", e);
-            }
-        }
-
-      switch(visitor.needsField(fieldInfo)) {
+        RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
+          visitor instanceof RestrictedStoredFieldVisitor ?
+          (RestrictedStoredFieldVisitor) visitor :
+          new DelegatingRestrictedFieldVisitor(visitor,
+                                               AuthorizationsHolder
+                                                 .threadAuthorizations
+                                                 .get()
+                                                 .getVisibilityEvaluator());
+      switch(restrictedStoredFieldVisitor.needsField(fieldInfo, cv)) {
         case YES:
-            if(hasAccess) {
-                readField(documentInput, visitor, fieldInfo, bits);
-                break;
-            }
+            readField(documentInput, restrictedStoredFieldVisitor, fieldInfo, bits, cv);
+            break;
         case NO:
           skipField(documentInput, bits, cv);
           break;

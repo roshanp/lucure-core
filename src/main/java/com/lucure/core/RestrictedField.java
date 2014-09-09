@@ -14,6 +14,20 @@ import java.io.IOException;
 
 public class RestrictedField extends Field {
 
+    public static Object toObject(Field field) {
+        Object data = field.readerValue();
+        if(data == null) {
+            data = field.numericValue();
+            if (data == null) {
+                data = field.binaryValue();
+                if (data == null) {
+                    data = field.stringValue();
+                }
+            }
+        }
+        return data;
+    }
+
   public final class ColumnVisibilityPayloadFilter extends TokenFilter {
     private final PayloadAttribute payAtt =
         addAttribute(PayloadAttribute.class);
@@ -48,20 +62,12 @@ public class RestrictedField extends Field {
 
   public RestrictedField(Field field, ColumnVisibility columnVisibility) {
     super(field.name(), field.fieldType());
-      this.fieldsData = field.readerValue();
-      if(this.fieldsData == null) {
-          this.fieldsData = field.numericValue();
-          if (this.fieldsData == null) {
-              this.fieldsData = field.binaryValue();
-              if (this.fieldsData == null) {
-                  this.fieldsData = field.stringValue();
-              }
-          }
-      }
+      Object data = toObject(field);
+      this.fieldsData = data;
       this.columnVisibility = columnVisibility;
   }
 
-  public ColumnVisibility getColumnVisibility() {
+    public ColumnVisibility getColumnVisibility() {
     return columnVisibility;
   }
 

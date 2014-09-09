@@ -23,7 +23,7 @@ import org.apache.lucene.codecs.lucene42.Lucene42NormsFormat;
 import org.apache.lucene.codecs.lucene42.Lucene42TermVectorsFormat;
 import org.apache.lucene.codecs.lucene46.Lucene46FieldInfosFormat;
 import org.apache.lucene.codecs.lucene46.Lucene46SegmentInfoFormat;
-import org.apache.lucene.codecs.perfield.PerFieldDocValuesFormat;
+import org.apache.lucene.codecs.lucene49.Lucene49NormsFormat;
 import org.apache.lucene.codecs.perfield.PerFieldPostingsFormat;
 
 /**
@@ -52,17 +52,10 @@ public class LucureCodec extends Codec {
       return LucureCodec.this.getPostingsFormatForField(field);
     }
   };
-  
-  private final DocValuesFormat docValuesFormat = new PerFieldDocValuesFormat() {
-    @Override
-    public DocValuesFormat getDocValuesFormatForField(String field) {
-      return LucureCodec.this.getDocValuesFormatForField(field);
-    }
-  };
 
   /** Sole constructor. */
   public LucureCodec() {
-    super("Lucene46");
+    super("Lucure");
   }
   
   @Override
@@ -104,24 +97,14 @@ public class LucureCodec extends Codec {
     return defaultFormat;
   }
   
-  /** Returns the docvalues format that should be used for writing 
-   *  new segments of <code>field</code>.
-   *  
-   *  The default implementation always returns "Lucene45"
-   */
-  public DocValuesFormat getDocValuesFormatForField(String field) {
-    return defaultDVFormat;
-  }
-  
   @Override
   public final DocValuesFormat docValuesFormat() {
-    return docValuesFormat;
+    throw new UnsupportedOperationException("DocValues is not supported in Lucure");
   }
 
-  private final PostingsFormat defaultFormat = PostingsFormat.forName("Lucene41");
-  private final DocValuesFormat defaultDVFormat = DocValuesFormat.forName("Lucene45");
+  private final PostingsFormat defaultFormat = PostingsFormat.forName("Lucure");
 
-  private final NormsFormat normsFormat = new Lucene42NormsFormat();
+  private final NormsFormat normsFormat = new Lucene49NormsFormat();
 
   @Override
   public final NormsFormat normsFormat() {

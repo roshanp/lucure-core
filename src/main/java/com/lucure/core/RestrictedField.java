@@ -1,8 +1,5 @@
 package com.lucure.core;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenFilter;
@@ -11,6 +8,8 @@ import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.util.BytesRef;
+
+import java.io.IOException;
 
 public class RestrictedField extends Field {
 
@@ -51,7 +50,7 @@ public class RestrictedField extends Field {
   }
 
   @Override
-  public TokenStream tokenStream(Analyzer analyzer) throws IOException {
+  public TokenStream tokenStream(Analyzer analyzer, TokenStream reuse) throws IOException {
     TokenStream tokenStream = analyzer.tokenStream(name(), super.stringValue());
     tokenStream = new ColumnVisibilityPayloadFilter(tokenStream, columnVisibility);
     return tokenStream;

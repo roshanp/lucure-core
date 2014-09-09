@@ -17,10 +17,13 @@ package com.lucure.core.codec;
  * limitations under the License.
  */
 
+import static org.apache.lucene.util.BitUtil.zigZagEncode;
+
 import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.lucene.codecs.Codec;
+import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.util.packed.PackedInts;
@@ -70,10 +73,6 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
   
   static final int BLOCK_SIZE = 1024; // number of chunks to serialize at once
 
-  static long moveSignToLowOrderBit(long n) {
-    return (n >> 63) ^ (n << 1);
-  }
-
   final IndexOutput fieldsIndexOut;
   int totalDocs;
   int blockDocs;
@@ -122,7 +121,7 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
     long maxDelta = 0;
     for (int i = 0; i < blockChunks; ++i) {
       final int delta = docBase - avgChunkDocs * i;
-      maxDelta |= moveSignToLowOrderBit(delta);
+      maxDelta |= zigZagEncode(delta);
       docBase += docBaseDeltas[i];
     }
 
@@ -133,8 +132,8 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
     docBase = 0;
     for (int i = 0; i < blockChunks; ++i) {
       final long delta = docBase - avgChunkDocs * i;
-      assert PackedInts.bitsRequired(moveSignToLowOrderBit(delta)) <= writer.bitsPerValue();
-      writer.add(moveSignToLowOrderBit(delta));
+      assert PackedInts.bitsRequired(zigZagEncode(delta)) <= writer.bitsPerValue();
+      writer.add(zigZagEncode(delta));
       docBase += docBaseDeltas[i];
     }
     writer.finish();
@@ -153,7 +152,7 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
     for (int i = 0; i < blockChunks; ++i) {
       startPointer += startPointerDeltas[i];
       final long delta = startPointer - avgChunkSize * i;
-      maxDelta |= moveSignToLowOrderBit(delta);
+      maxDelta |= zigZagEncode(delta);
     }
 
     final int bitsPerStartPointer = PackedInts.bitsRequired(maxDelta);
@@ -164,8 +163,8 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
     for (int i = 0; i < blockChunks; ++i) {
       startPointer += startPointerDeltas[i];
       final long delta = startPointer - avgChunkSize * i;
-      assert PackedInts.bitsRequired(moveSignToLowOrderBit(delta)) <= writer.bitsPerValue();
-      writer.add(moveSignToLowOrderBit(delta));
+      assert PackedInts.bitsRequired(zigZagEncode(delta)) <= writer.bitsPerValue();
+      writer.add(zigZagEncode(delta));
     }
     writer.finish();
   }
@@ -190,7 +189,7 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
     maxStartPointer = startPointer;
   }
 
-  void finish(int numDocs) throws IOException {
+  void finish(int numDocs, long maxPointer) throws IOException {
     if (numDocs != totalDocs) {
       throw new IllegalStateException("Expected " + numDocs + " docs, but got " + totalDocs);
     }
@@ -198,6 +197,8 @@ public final class CompressingStoredFieldsIndexWriter implements Closeable {
       writeBlock();
     }
     fieldsIndexOut.writeVInt(0); // end marker
+    fieldsIndexOut.writeVLong(maxPointer);
+    CodecUtil.writeFooter(fieldsIndexOut);
   }
 
   @Override

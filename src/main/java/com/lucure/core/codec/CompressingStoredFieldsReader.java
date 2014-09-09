@@ -17,26 +17,6 @@ package com.lucure.core.codec;
  * limitations under the License.
  */
 
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.BYTE_ARR;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.CODEC_SFX_DAT;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.CODEC_SFX_IDX;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.NUMERIC_DOUBLE;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.NUMERIC_FLOAT;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.NUMERIC_INT;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.NUMERIC_LONG;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.STRING;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.TYPE_BITS;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.TYPE_MASK;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.VERSION_BIG_CHUNKS;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.VERSION_CURRENT;
-import static com.lucure.core.codec.CompressingStoredFieldsWriter.VERSION_START;
-import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter.FIELDS_EXTENSION;
-import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter.FIELDS_INDEX_EXTENSION;
-
-import java.io.EOFException;
-import java.io.IOException;
-import java.util.Arrays;
-
 import com.lucure.core.RestrictedStoredFieldVisitor;
 import org.apache.accumulo.core.security.ColumnVisibility;
 import org.apache.accumulo.core.security.VisibilityParseException;
@@ -44,23 +24,22 @@ import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.codecs.compressing.CompressionMode;
 import org.apache.lucene.codecs.compressing.Decompressor;
-import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.FieldInfo;
-import org.apache.lucene.index.FieldInfos;
-import org.apache.lucene.index.IndexFileNames;
-import org.apache.lucene.index.SegmentInfo;
-import org.apache.lucene.index.StoredFieldVisitor;
-import org.apache.lucene.store.AlreadyClosedException;
-import org.apache.lucene.store.ByteArrayDataInput;
-import org.apache.lucene.store.DataInput;
-import org.apache.lucene.store.DataOutput;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.IOContext;
-import org.apache.lucene.store.IndexInput;
+import org.apache.lucene.index.*;
+import org.apache.lucene.store.*;
 import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.packed.PackedInts;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.util.Arrays;
+
+import static com.lucure.core.codec.CompressingStoredFieldsWriter.*;
+import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter
+  .FIELDS_EXTENSION;
+import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter
+  .FIELDS_INDEX_EXTENSION;
 
 /**
  * {@link StoredFieldsReader} impl for {@link CompressingStoredFieldsFormat}.
@@ -71,21 +50,10 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
   // Do not reuse the decompression buffer when there is more than 32kb to decompress
   private static final int BUFFER_REUSE_THRESHOLD = 1 << 15;
 
-  private static final byte[] SKIP_BUFFER = new byte[1024];
-
-  // TODO: should this be a method on DataInput?
-  private static void skipBytes(DataInput in, long numBytes) throws IOException {
-    assert numBytes >= 0;
-    for (long skipped = 0; skipped < numBytes; ) {
-      final int toRead = (int) Math.min(numBytes - skipped, SKIP_BUFFER.length);
-      in.readBytes(SKIP_BUFFER, 0, toRead);
-      skipped += toRead;
-    }
-  }
-
   private final int version;
   private final FieldInfos fieldInfos;
   private final CompressingStoredFieldsIndexReader indexReader;
+  private final long maxPointer;
   private final IndexInput fieldsStream;
   private final int chunkSize;
   private final int packedIntsVersion;
@@ -101,6 +69,7 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
     this.fieldInfos = reader.fieldInfos;
     this.fieldsStream = reader.fieldsStream.clone();
     this.indexReader = reader.indexReader.clone();
+    this.maxPointer = reader.maxPointer;
     this.chunkSize = reader.chunkSize;
     this.packedIntsVersion = reader.packedIntsVersion;
     this.compressionMode = reader.compressionMode;
@@ -118,21 +87,38 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
     boolean success = false;
     fieldInfos = fn;
     numDocs = si.getDocCount();
-    IndexInput indexStream = null;
+    ChecksumIndexInput indexStream = null;
     try {
-      // Load the index into memory
       final String indexStreamFN = IndexFileNames.segmentFileName(segment, segmentSuffix, FIELDS_INDEX_EXTENSION);
-      indexStream = d.openInput(indexStreamFN, context);
+      final String fieldsStreamFN = IndexFileNames.segmentFileName(segment, segmentSuffix, FIELDS_EXTENSION);
+      // Load the index into memory
+      indexStream = d.openChecksumInput(indexStreamFN, context);
       final String codecNameIdx = formatName + CODEC_SFX_IDX;
       version = CodecUtil.checkHeader(indexStream, codecNameIdx, VERSION_START, VERSION_CURRENT);
       assert CodecUtil.headerLength(codecNameIdx) == indexStream.getFilePointer();
       indexReader = new CompressingStoredFieldsIndexReader(indexStream, si);
+
+      long maxPointer = -1;
+
+      if (version >= VERSION_CHECKSUM) {
+        maxPointer = indexStream.readVLong();
+        CodecUtil.checkFooter(indexStream);
+      } else {
+        CodecUtil.checkEOF(indexStream);
+      }
       indexStream.close();
       indexStream = null;
 
       // Open the data file and read metadata
-      final String fieldsStreamFN = IndexFileNames.segmentFileName(segment, segmentSuffix, FIELDS_EXTENSION);
       fieldsStream = d.openInput(fieldsStreamFN, context);
+      if (version >= VERSION_CHECKSUM) {
+        if (maxPointer + CodecUtil.footerLength() != fieldsStream.length()) {
+          throw new CorruptIndexException("Invalid fieldsStream maxPointer (file truncated?): maxPointer=" + maxPointer + ", length=" + fieldsStream.length());
+        }
+      } else {
+        maxPointer = fieldsStream.length();
+      }
+      this.maxPointer = maxPointer;
       final String codecNameDat = formatName + CODEC_SFX_DAT;
       final int fieldsVersion = CodecUtil.checkHeader(fieldsStream, codecNameDat, VERSION_START, VERSION_CURRENT);
       if (version != fieldsVersion) {
@@ -148,6 +134,14 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       packedIntsVersion = fieldsStream.readVInt();
       decompressor = compressionMode.newDecompressor();
       this.bytes = new BytesRef();
+
+      if (version >= VERSION_CHECKSUM) {
+        // NOTE: data file is too costly to verify checksum against all the bytes on open,
+        // but for now we at least verify proper structure of the checksum footer: which looks
+        // for FOOTER_MAGIC + algorithmID. This is cheap and can detect some forms of corruption
+        // such as file truncation.
+        CodecUtil.retrieveChecksum(fieldsStream);
+      }
 
       success = true;
     } finally {
@@ -178,59 +172,36 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
   }
 
   private static void readField(
-          DataInput in, StoredFieldVisitor visitor, FieldInfo info, int bits, ColumnVisibility cv) throws IOException {
-
-      boolean hasAccess = true;
-      if(visitor instanceof RestrictedStoredFieldVisitor && cv != null) {
-          RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-                  (RestrictedStoredFieldVisitor) visitor;
-          try {
-              hasAccess = restrictedStoredFieldVisitor.hasAccess(cv);
-          } catch (VisibilityParseException e) {
-              throw new IOException("Exception occurred parsing Column Visibility[" + cv + "]", e);
-          }
-      }
+          DataInput in, StoredFieldVisitor visitor, FieldInfo info, int bits) throws IOException {
 
     switch (bits & TYPE_MASK) {
       case BYTE_ARR:
         int length = in.readVInt();
         byte[] data = new byte[length];
         in.readBytes(data, 0, length);
-          if(hasAccess) {
-              visitor.binaryField(info, data);
-          }
+        visitor.binaryField(info, data);
         break;
       case STRING:
         length = in.readVInt();
         data = new byte[length];
         in.readBytes(data, 0, length);
-          if(hasAccess) {
-              visitor.stringField(info, new String(data, IOUtils.CHARSET_UTF_8));
-          }
+        visitor.stringField(info, new String(data, IOUtils.CHARSET_UTF_8));
         break;
       case NUMERIC_INT:
           int intValue = in.readInt();
-          if(hasAccess) {
-              visitor.intField(info, intValue);
-          }
+          visitor.intField(info, intValue);
         break;
       case NUMERIC_FLOAT:
           float floatValue = Float.intBitsToFloat(in.readInt());
-          if(hasAccess) {
-              visitor.floatField(info, floatValue);
-          }
+          visitor.floatField(info, floatValue);
         break;
       case NUMERIC_LONG:
           long longValue = in.readLong();
-          if(hasAccess) {
-              visitor.longField(info, longValue);
-          }
+          visitor.longField(info, longValue);
         break;
       case NUMERIC_DOUBLE:
           double doubleValue = Double.longBitsToDouble(in.readLong());
-          if(hasAccess) {
-              visitor.doubleField(info, doubleValue);
-          }
+          visitor.doubleField(info, doubleValue);
         break;
       default:
         throw new AssertionError("Unknown type flag: " + Integer.toHexString(bits));
@@ -242,7 +213,7 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       case BYTE_ARR:
       case STRING:
         final int length = in.readVInt();
-        skipBytes(in, length);
+        in.skipBytes(length);
         break;
       case NUMERIC_INT:
       case NUMERIC_FLOAT:
@@ -373,7 +344,6 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
     }
 
     for (int fieldIDX = 0; fieldIDX < numStoredFields; fieldIDX++) {
-
       final long infoAndBits = documentInput.readVLong();
       final int fieldNumber = (int) (infoAndBits >>> TYPE_BITS);
       final FieldInfo fieldInfo = fieldInfos.fieldInfo(fieldNumber);
@@ -391,10 +361,23 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
             cv = new ColumnVisibility(cv_bytes);
         }
 
+        boolean hasAccess = true;
+        if(visitor instanceof RestrictedStoredFieldVisitor && cv != null) {
+            RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
+              (RestrictedStoredFieldVisitor) visitor;
+            try {
+                hasAccess = restrictedStoredFieldVisitor.hasAccess(cv);
+            } catch (VisibilityParseException e) {
+                throw new IOException("Exception occurred parsing Column Visibility[" + cv + "]", e);
+            }
+        }
+
       switch(visitor.needsField(fieldInfo)) {
         case YES:
-          readField(documentInput, visitor, fieldInfo, bits, cv);
-          break;
+            if(hasAccess) {
+                readField(documentInput, visitor, fieldInfo, bits);
+                break;
+            }
         case NO:
           skipField(documentInput, bits, cv);
           break;
@@ -425,24 +408,30 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
   ChunkIterator chunkIterator(int startDocID) throws IOException {
     ensureOpen();
     fieldsStream.seek(indexReader.getStartPointer(startDocID));
-    return new ChunkIterator();
+    return new ChunkIterator(startDocID);
   }
 
   final class ChunkIterator {
 
-    BytesRef spare;
-    BytesRef bytes;
+    final ChecksumIndexInput fieldsStream;
+    final BytesRef spare;
+    final BytesRef bytes;
     int docBase;
     int chunkDocs;
     int[] numStoredFields;
     int[] lengths;
 
-    private ChunkIterator() {
+    private ChunkIterator(int startDocId) throws IOException {
       this.docBase = -1;
       bytes = new BytesRef();
       spare = new BytesRef();
       numStoredFields = new int[1];
       lengths = new int[1];
+
+      IndexInput in = CompressingStoredFieldsReader.this.fieldsStream;
+      in.seek(0);
+      fieldsStream = new BufferedChecksumIndexInput(in);
+      fieldsStream.seek(indexReader.getStartPointer(startDocId));
     }
 
     /**
@@ -535,13 +524,13 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
     }
 
     /**
-     * Copy compressed data.
+     * Check integrity of the data. The iterator is not usable after this method has been called.
      */
-    void copyCompressedData(DataOutput out) throws IOException {
-      final long chunkEnd = docBase + chunkDocs == numDocs
-          ? fieldsStream.length()
-          : indexReader.getStartPointer(docBase + chunkDocs);
-      out.copyBytes(fieldsStream, chunkEnd - fieldsStream.getFilePointer());
+    void checkIntegrity() throws IOException {
+      if (version >= VERSION_CHECKSUM) {
+        fieldsStream.seek(fieldsStream.length() - CodecUtil.footerLength());
+        CodecUtil.checkFooter(fieldsStream);
+      }
     }
 
   }
@@ -549,6 +538,13 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
   @Override
   public long ramBytesUsed() {
     return indexReader.ramBytesUsed();
+  }
+
+  @Override
+  public void checkIntegrity() throws IOException {
+    if (version >= VERSION_CHECKSUM) {
+      CodecUtil.checksumEntireFile(fieldsStream);
+    }
   }
 
 }

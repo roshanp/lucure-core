@@ -61,7 +61,8 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
   static final String CODEC_SFX_DAT = "Data";
   static final int VERSION_START = 0;
   static final int VERSION_BIG_CHUNKS = 1;
-  static final int VERSION_CURRENT = VERSION_BIG_CHUNKS;
+  static final int VERSION_CHECKSUM = 2;
+  static final int VERSION_CURRENT = VERSION_CHECKSUM;
 
   private final Directory directory;
   private final String segment;
@@ -132,20 +133,23 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
     }
   }
 
+  private int numStoredFieldsInDoc;
+
   @Override
-  public void startDocument(int numStoredFields) throws IOException {
+  public void startDocument() throws IOException {
+  }
+
+  @Override
+  public void finishDocument() throws IOException {
     if (numBufferedDocs == this.numStoredFields.length) {
       final int newLength = ArrayUtil.oversize(numBufferedDocs + 1, 4);
       this.numStoredFields = Arrays.copyOf(this.numStoredFields, newLength);
       endOffsets = Arrays.copyOf(endOffsets, newLength);
     }
-    this.numStoredFields[numBufferedDocs] = numStoredFields;
+    this.numStoredFields[numBufferedDocs] = numStoredFieldsInDoc;
+    numStoredFieldsInDoc = 0;
+    endOffsets[numBufferedDocs] = bufferedDocs.length;
     ++numBufferedDocs;
-  }
-
-  @Override
-  public void finishDocument() throws IOException {
-    endOffsets[numBufferedDocs - 1] = bufferedDocs.length;
     if (triggerFlush()) {
       flush();
     }
@@ -230,6 +234,8 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
   public void writeField(FieldInfo info, IndexableField field)
       throws IOException {
 
+    ++numStoredFieldsInDoc;
+
     int bits = 0;
     final BytesRef bytes;
 
@@ -313,7 +319,8 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
     if (docBase != numDocs) {
       throw new RuntimeException("Wrote " + docBase + " docs, finish called with numDocs=" + numDocs);
     }
-    indexWriter.finish(numDocs);
+    indexWriter.finish(numDocs, fieldsStream.getFilePointer());
+    CodecUtil.writeFooter(fieldsStream);
     assert bufferedDocs.length == 0;
   }
 
@@ -364,37 +371,24 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
               startOffsets[i] = startOffsets[i - 1] + it.lengths[i - 1];
             }
 
-            if (numBufferedDocs == 0 // starting a new chunk
-                && startOffsets[it.chunkDocs - 1] < chunkSize // chunk is small enough
-                && startOffsets[it.chunkDocs - 1] + it.lengths[it.chunkDocs - 1] >= chunkSize // chunk is large enough
-                && nextDeletedDoc(it.docBase, liveDocs, it.docBase + it.chunkDocs) == it.docBase + it.chunkDocs) { // no deletion in the chunk
-              assert docID == it.docBase;
-
-              // no need to decompress, just copy data
-              indexWriter.writeIndex(it.chunkDocs, fieldsStream.getFilePointer());
-              writeHeader(this.docBase, it.chunkDocs, it.numStoredFields, it.lengths);
-              it.copyCompressedData(fieldsStream);
-              this.docBase += it.chunkDocs;
-              docID = nextLiveDoc(it.docBase + it.chunkDocs, liveDocs, maxDoc);
-              docCount += it.chunkDocs;
-              mergeState.checkAbort.work(300 * it.chunkDocs);
-            } else {
-              // decompress
-              it.decompress();
-              if (startOffsets[it.chunkDocs - 1] + it.lengths[it.chunkDocs - 1] != it.bytes.length) {
-                throw new CorruptIndexException("Corrupted: expected chunk size=" + startOffsets[it.chunkDocs - 1] + it.lengths[it.chunkDocs - 1] + ", got " + it.bytes.length);
-              }
-              // copy non-deleted docs
-              for (; docID < it.docBase + it.chunkDocs; docID = nextLiveDoc(docID + 1, liveDocs, maxDoc)) {
-                final int diff = docID - it.docBase;
-                startDocument(it.numStoredFields[diff]);
-                bufferedDocs.writeBytes(it.bytes.bytes, it.bytes.offset + startOffsets[diff], it.lengths[diff]);
-                finishDocument();
-                ++docCount;
-                mergeState.checkAbort.work(300);
-              }
+            // decompress
+            it.decompress();
+            if (startOffsets[it.chunkDocs - 1] + it.lengths[it.chunkDocs - 1] != it.bytes.length) {
+              throw new CorruptIndexException("Corrupted: expected chunk size=" + startOffsets[it.chunkDocs - 1] + it.lengths[it.chunkDocs - 1] + ", got " + it.bytes.length);
+            }
+            // copy non-deleted docs
+            for (; docID < it.docBase + it.chunkDocs; docID = nextLiveDoc(docID + 1, liveDocs, maxDoc)) {
+              final int diff = docID - it.docBase;
+              startDocument();
+              bufferedDocs.writeBytes(it.bytes.bytes, it.bytes.offset + startOffsets[diff], it.lengths[diff]);
+              numStoredFieldsInDoc = it.numStoredFields[diff];
+              finishDocument();
+              ++docCount;
+              mergeState.checkAbort.work(300);
             }
           } while (docID < maxDoc);
+
+          it.checkIntegrity();
         }
       }
     }
@@ -411,15 +405,4 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
     }
     return doc;
   }
-
-  private static int nextDeletedDoc(int doc, Bits liveDocs, int maxDoc) {
-    if (liveDocs == null) {
-      return maxDoc;
-    }
-    while (doc < maxDoc && liveDocs.get(doc)) {
-      ++doc;
-    }
-    return doc;
-  }
-
 }

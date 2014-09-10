@@ -238,9 +238,9 @@ public final class LucurePostingsWriter extends PostingsWriterBase {
   public int setField(FieldInfo fieldInfo) {
     IndexOptions indexOptions = fieldInfo.getIndexOptions();
     fieldHasFreqs = indexOptions.compareTo(IndexOptions.DOCS_AND_FREQS) >= 0;
-    fieldHasPositions = true;
+    fieldHasPositions = indexOptions.compareTo(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS) >= 0;
     fieldHasOffsets = indexOptions.compareTo(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS) >= 0;
-    fieldHasPayloads = true;
+    fieldHasPayloads = fieldInfo.hasPayloads();
     skipWriter.setField(fieldHasPositions, fieldHasOffsets, fieldHasPayloads);
     lastState = emptyState;
     if (fieldHasPositions) {

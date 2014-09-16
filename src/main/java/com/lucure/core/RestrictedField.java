@@ -1,13 +1,12 @@
 package com.lucure.core;
 
-import org.apache.accumulo.core.security.ColumnVisibility;
+import com.lucure.core.security.ColumnVisibility;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.util.BytesRef;
 
 import java.io.IOException;

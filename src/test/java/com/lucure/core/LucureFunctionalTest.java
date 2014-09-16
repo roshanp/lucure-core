@@ -1,9 +1,10 @@
 package com.lucure.core;
 
 import com.lucure.core.codec.LucureCodec;
+import com.lucure.core.index.LucureIndexSearcher;
 import com.lucure.core.query.AuthorizationsQueryParser;
-import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.core.security.ColumnVisibility;
+import com.lucure.core.security.Authorizations;
+import com.lucure.core.security.ColumnVisibility;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;

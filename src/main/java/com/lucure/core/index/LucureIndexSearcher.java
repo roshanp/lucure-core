@@ -1,14 +1,16 @@
-package com.lucure.core;
+package com.lucure.core.index;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import com.lucure.core.AuthorizationsHolder;
 import com.lucure.core.query.AuthQuery;
-import org.apache.accumulo.core.security.Authorizations;
+import com.lucure.core.security.Authorizations;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexReaderContext;
-import org.apache.lucene.index.StoredFieldVisitor;
+import org.apache.lucene.index.*;
 import org.apache.lucene.search.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -17,22 +19,53 @@ import static com.lucure.core.AuthorizationsHolder.threadAuthorizations;
 /**
  */
 public class LucureIndexSearcher extends IndexSearcher {
+
+    public static final Function<AtomicReaderContext, LucureAtomicReader>
+      LUCURE_ATOMIC_READER_FUNCTION =
+      new Function<AtomicReaderContext, LucureAtomicReader>() {
+          @Override
+          public LucureAtomicReader apply(
+            AtomicReaderContext atomicReaderContext) {
+              return new LucureAtomicReader(atomicReaderContext.reader());
+          }
+      };
+
+    public static final Function<IndexReader, IndexReader> LUCURE_WRAP_READER_FUNCTION =
+      new Function<IndexReader, IndexReader>() {
+          @Override
+          public IndexReader apply(
+            IndexReader indexReader) {
+              if(indexReader instanceof LucureAtomicReader) {
+                  return indexReader;
+              }
+
+              if(indexReader instanceof AtomicReader) {
+                  return new LucureAtomicReader((AtomicReader) indexReader);
+              }
+
+              CompositeReader compositeReader = (CompositeReader) indexReader;
+              List<LucureAtomicReader> lucureReaders = Lists.transform(
+                compositeReader.leaves(), LUCURE_ATOMIC_READER_FUNCTION);
+              return new MultiReader(lucureReaders.toArray(new LucureAtomicReader[lucureReaders.size()]));
+          }
+      };
+
     public LucureIndexSearcher(IndexReader r) {
-        super(r);
+        super(LUCURE_WRAP_READER_FUNCTION.apply(r));
     }
 
     public LucureIndexSearcher(
       IndexReader r, ExecutorService executor) {
-        super(r, executor);
+        super(LUCURE_WRAP_READER_FUNCTION.apply(r), executor);
     }
 
     public LucureIndexSearcher(
       IndexReaderContext context, ExecutorService executor) {
-        super(context, executor);
+        super(LUCURE_WRAP_READER_FUNCTION.apply(context.reader()), executor);
     }
 
     public LucureIndexSearcher(IndexReaderContext context) {
-        super(context);
+        super(LUCURE_WRAP_READER_FUNCTION.apply(context.reader()), null);
     }
 
     public Document doc(int docID, Authorizations authorizations) throws IOException {
@@ -47,7 +80,9 @@ public class LucureIndexSearcher extends IndexSearcher {
     public void doc(int docID, StoredFieldVisitor fieldVisitor, Authorizations authorizations) throws IOException {
         AuthorizationsHolder authorizationsHolder = new AuthorizationsHolder(authorizations);
         threadAuthorizations.set(authorizationsHolder);
-        super.doc(docID, new DelegatingRestrictedFieldVisitor(fieldVisitor, authorizationsHolder.getVisibilityEvaluator()));
+        super.doc(docID, new DelegatingRestrictedFieldVisitor(fieldVisitor,
+                                                              authorizationsHolder
+                                                                .getVisibilityEvaluator()));
     }
 
     /**

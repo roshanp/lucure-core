@@ -1,7 +1,7 @@
 package com.lucure.core.query;
 
 import com.lucure.core.AuthorizationsHolder;
-import org.apache.accumulo.core.security.Authorizations;
+import com.lucure.core.security.Authorizations;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;

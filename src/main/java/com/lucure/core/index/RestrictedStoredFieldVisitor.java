@@ -1,8 +1,8 @@
-package com.lucure.core;
+package com.lucure.core.index;
 
-import org.apache.accumulo.core.security.ColumnVisibility;
-import org.apache.accumulo.core.security.VisibilityEvaluator;
-import org.apache.accumulo.core.security.VisibilityParseException;
+import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.VisibilityEvaluator;
+import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.slf4j.Logger;

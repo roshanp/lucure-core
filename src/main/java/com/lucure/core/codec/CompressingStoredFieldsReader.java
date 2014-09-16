@@ -18,11 +18,9 @@ package com.lucure.core.codec;
  */
 
 import com.lucure.core.AuthorizationsHolder;
-import com.lucure.core.DelegatingRestrictedFieldVisitor;
-import com.lucure.core.RestrictedStoredFieldVisitor;
-import org.apache.accumulo.core.security.ColumnVisibility;
-import org.apache.accumulo.core.security.VisibilityEvaluator;
-import org.apache.accumulo.core.security.VisibilityParseException;
+import com.lucure.core.index.DelegatingRestrictedFieldVisitor;
+import com.lucure.core.index.RestrictedStoredFieldVisitor;
+import com.lucure.core.security.ColumnVisibility;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.codecs.compressing.CompressionMode;

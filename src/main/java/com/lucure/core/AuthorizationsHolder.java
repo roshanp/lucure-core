@@ -1,7 +1,7 @@
 package com.lucure.core;
 
-import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.core.security.VisibilityEvaluator;
+import com.lucure.core.security.Authorizations;
+import com.lucure.core.security.VisibilityEvaluator;
 
 /**
  */

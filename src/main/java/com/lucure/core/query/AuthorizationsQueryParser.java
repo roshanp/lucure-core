@@ -1,6 +1,6 @@
 package com.lucure.core.query;
 
-import org.apache.accumulo.core.security.Authorizations;
+import com.lucure.core.security.Authorizations;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;

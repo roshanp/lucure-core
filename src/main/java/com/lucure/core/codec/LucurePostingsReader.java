@@ -19,10 +19,9 @@ package com.lucure.core.codec;
 
 
 import com.lucure.core.AuthorizationsHolder;
-import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.core.security.ColumnVisibility;
-import org.apache.accumulo.core.security.VisibilityEvaluator;
-import org.apache.accumulo.core.security.VisibilityParseException;
+import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.VisibilityEvaluator;
+import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.BlockTermState;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.PostingsReaderBase;

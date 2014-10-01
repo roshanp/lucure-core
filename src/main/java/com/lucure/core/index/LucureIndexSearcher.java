@@ -35,7 +35,8 @@ public class LucureIndexSearcher extends IndexSearcher {
           @Override
           public IndexReader apply(
             IndexReader indexReader) {
-              if(indexReader instanceof LucureAtomicReader) {
+              if (indexReader instanceof LucureAtomicReader ||
+                  indexReader instanceof LucureDirectoryReader) {
                   return indexReader;
               }
 
@@ -191,4 +192,6 @@ public class LucureIndexSearcher extends IndexSearcher {
         return super.searchAfter(after, new AuthQuery(query, authorizations), filter, n, sort, doDocScores,
                                  doMaxScore);
     }
+
+
 }

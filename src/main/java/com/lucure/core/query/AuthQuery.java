@@ -24,10 +24,10 @@ public class AuthQuery extends Query {
         private final AuthQuery authQuery;
         private final AuthorizationsHolder authorizationsHolder;
 
-        private AuthWeight(Weight weight, AuthQuery authQuery, Authorizations authorizations) {
+        private AuthWeight(Weight weight, AuthQuery authQuery, AuthorizationsHolder authorizationsHolder) {
             this.weight = weight;
             this.authQuery = authQuery;
-            this.authorizationsHolder = new AuthorizationsHolder(authorizations);
+            this.authorizationsHolder = authorizationsHolder;
         }
 
         @Override
@@ -168,11 +168,11 @@ public class AuthQuery extends Query {
     }
 
     private final Query query;
-    private final Authorizations authorizations;
+    private final AuthorizationsHolder authorizationsHolder;
 
     public AuthQuery(Query query, Authorizations authorizations) {
         this.query = query;
-        this.authorizations = authorizations;
+        this.authorizationsHolder = new AuthorizationsHolder(authorizations);
     }
 
     @Override
@@ -197,7 +197,7 @@ public class AuthQuery extends Query {
 
     @Override
     public Weight createWeight(IndexSearcher searcher) throws IOException {
-        return new AuthWeight(query.createWeight(searcher), this, authorizations);
+        return new AuthWeight(query.createWeight(searcher), this, authorizationsHolder);
     }
 
     @Override
@@ -205,7 +205,7 @@ public class AuthQuery extends Query {
       IndexReader reader) throws IOException {
         Query rewrite = query.rewrite(reader);
         if(!query.equals(rewrite)) {
-            return new AuthQuery(rewrite, authorizations);
+            return new AuthQuery(rewrite, authorizationsHolder.getAuthorizations());
         }
         return this;
     }
@@ -217,7 +217,24 @@ public class AuthQuery extends Query {
 
     @Override
     public Query clone() {
-        return new AuthQuery(query.clone(), new Authorizations(authorizations.getAuthorizations()));
+        return new AuthQuery(query.clone(), new Authorizations(
+          authorizationsHolder.getAuthorizations().getAuthorizations()));
+    }
+
+    public Query getInnerQuery() {
+        return query;
+    }
+
+    public Authorizations getAuthorizations() {
+        return authorizationsHolder.getAuthorizations();
+    }
+
+    public void loadCurrentAuthorizations() {
+        AuthorizationsHolder.threadAuthorizations.set(authorizationsHolder);
+    }
+
+    public void clearCurrentAuthorizations() {
+        AuthorizationsHolder.threadAuthorizations.remove();
     }
 
     @Override
@@ -234,8 +251,8 @@ public class AuthQuery extends Query {
 
         AuthQuery authQuery = (AuthQuery) o;
 
-        if (authorizations != null ? !authorizations.equals(
-          authQuery.authorizations) : authQuery.authorizations != null) {
+        if (authorizationsHolder != null ? !authorizationsHolder.equals(
+          authQuery.authorizationsHolder) : authQuery.authorizationsHolder != null) {
             return false;
         }
         if (query != null ? !query.equals(authQuery.query) :
@@ -251,7 +268,7 @@ public class AuthQuery extends Query {
         int result = super.hashCode();
         result = 31 * result + (query != null ? query.hashCode() : 0);
         result = 31 * result +
-                 (authorizations != null ? authorizations.hashCode() : 0);
+                 (authorizationsHolder != null ? authorizationsHolder.hashCode() : 0);
         return result;
     }
 }

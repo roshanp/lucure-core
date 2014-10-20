@@ -7,13 +7,15 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.IndexableFieldType;
 import org.apache.lucene.util.BytesRef;
 
 import java.io.IOException;
 
 public class RestrictedField extends Field {
 
-    public static Object toObject(Field field) {
+    public static Object toObject(IndexableField field) {
         Object data = field.readerValue();
         if(data == null) {
             data = field.numericValue();
@@ -25,6 +27,21 @@ public class RestrictedField extends Field {
             }
         }
         return data;
+    }
+
+    public static FieldType from(IndexableFieldType indexableFieldType) {
+        final FieldType fieldType = new FieldType();
+        fieldType.setStored(indexableFieldType.stored());
+        fieldType.setIndexed(indexableFieldType.indexed());
+        fieldType.setIndexOptions(indexableFieldType.indexOptions());
+        fieldType.setStoreTermVectors(indexableFieldType.storeTermVectors());
+        fieldType.setStoreTermVectorPositions(indexableFieldType.storeTermVectorPositions());
+        fieldType.setStoreTermVectorPayloads(indexableFieldType.storeTermVectorPayloads());
+        fieldType.setStoreTermVectorOffsets(indexableFieldType.storeTermVectorOffsets());
+        fieldType.setDocValueType(indexableFieldType.docValueType());
+        fieldType.setOmitNorms(indexableFieldType.omitNorms());
+        fieldType.setTokenized(indexableFieldType.tokenized());
+        return fieldType;
     }
 
   public final class ColumnVisibilityPayloadFilter extends TokenFilter {
@@ -61,10 +78,15 @@ public class RestrictedField extends Field {
 
   public RestrictedField(Field field, ColumnVisibility columnVisibility) {
     super(field.name(), field.fieldType());
-      Object data = toObject(field);
-      this.fieldsData = data;
+      this.fieldsData = toObject(field);
       this.columnVisibility = columnVisibility;
   }
+
+    public RestrictedField(IndexableField field, ColumnVisibility columnVisibility) {
+        super(field.name(), from(field.fieldType()));
+        this.fieldsData = toObject(field);
+        this.columnVisibility = columnVisibility;
+    }
 
     public ColumnVisibility getColumnVisibility() {
     return columnVisibility;

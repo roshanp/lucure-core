@@ -69,6 +69,10 @@ public class LucureIndexSearcher extends IndexSearcher {
         super(LUCURE_WRAP_READER_FUNCTION.apply(context.reader()), null);
     }
 
+    public LucureIndexSearcher(IndexSearcher indexSearcher) {
+        super(indexSearcher.getTopReaderContext());
+    }
+
     public Document doc(int docID, Authorizations authorizations) throws IOException {
         threadAuthorizations.set(new AuthorizationsHolder(authorizations));
         return doc(docID, (Set<String>) null, authorizations);

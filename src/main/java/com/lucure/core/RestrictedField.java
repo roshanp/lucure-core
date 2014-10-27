@@ -94,7 +94,7 @@ public class RestrictedField extends Field {
 
   @Override
   public TokenStream tokenStream(Analyzer analyzer, TokenStream reuse) throws IOException {
-    TokenStream tokenStream = analyzer.tokenStream(name(), super.stringValue());
+    TokenStream tokenStream = super.tokenStream(analyzer, reuse);
     tokenStream = new ColumnVisibilityPayloadFilter(tokenStream, columnVisibility);
     return tokenStream;
   }

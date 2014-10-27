@@ -8,6 +8,7 @@ import com.lucure.core.security.Authorizations;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.*;
+import org.apache.lucene.store.AlreadyClosedException;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,19 +41,25 @@ public class LucureIndexSearcher extends IndexSearcher {
                   return indexReader;
               }
 
-//              if(indexReader instanceof DirectoryReader) {
-//                  return new LucureDirectoryReader(
-//                    (DirectoryReader) indexReader);
-//              }
+              if(indexReader instanceof DirectoryReader) {
+                  return new LucureDirectoryReader(
+                    (DirectoryReader) indexReader);
+              }
 
               if(indexReader instanceof AtomicReader) {
                   return new LucureAtomicReader((AtomicReader) indexReader);
               }
 
-              CompositeReader compositeReader = (CompositeReader) indexReader;
-              List<LucureAtomicReader> lucureReaders = Lists.transform(
-                compositeReader.leaves(), LUCURE_ATOMIC_READER_FUNCTION);
-              return new MultiReader(lucureReaders.toArray(new LucureAtomicReader[lucureReaders.size()]));
+              try {
+                  CompositeReader compositeReader = (CompositeReader) indexReader;
+                  List<LucureAtomicReader> lucureReaders = Lists
+                    .transform(compositeReader.leaves(),
+                               LUCURE_ATOMIC_READER_FUNCTION);
+                  return new MultiReader(lucureReaders.toArray(new LucureAtomicReader[lucureReaders.size()]));
+              } catch (AlreadyClosedException e) {
+                  // ignore
+              }
+              return new MultiReader(new LucureAtomicReader[0]);
           }
       };
 
@@ -75,7 +82,7 @@ public class LucureIndexSearcher extends IndexSearcher {
     }
 
     public LucureIndexSearcher(IndexSearcher indexSearcher) {
-        super(indexSearcher.getTopReaderContext());
+        this(indexSearcher.getTopReaderContext());
     }
 
     public Document doc(int docID, Authorizations authorizations) throws IOException {
@@ -198,5 +205,8 @@ public class LucureIndexSearcher extends IndexSearcher {
                                  doMaxScore);
     }
 
-
+    @Override
+    public IndexReader getIndexReader() {
+        return super.getIndexReader();
+    }
 }

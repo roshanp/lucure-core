@@ -21,6 +21,7 @@ import com.lucure.core.AuthorizationsHolder;
 import com.lucure.core.index.DelegatingRestrictedFieldVisitor;
 import com.lucure.core.index.RestrictedStoredFieldVisitor;
 import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.codecs.compressing.CompressionMode;
@@ -36,6 +37,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 
+import static com.lucure.core.codec.AccessFilteredDocsAndPositionsEnum
+  .AllAuthorizationsHolder.ALLAUTHSHOLDER;
 import static com.lucure.core.codec.CompressingStoredFieldsWriter.*;
 import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter
   .FIELDS_EXTENSION;
@@ -364,27 +367,38 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
         }
 
         RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
-          visitor instanceof RestrictedStoredFieldVisitor ?
-          (RestrictedStoredFieldVisitor) visitor :
-          new DelegatingRestrictedFieldVisitor(visitor,
-                                               AuthorizationsHolder
-                                                 .threadAuthorizations
-                                                 .get()
-                                                 .getVisibilityEvaluator());
-      switch(restrictedStoredFieldVisitor.needsField(fieldInfo, cv)) {
-        case YES:
-            readField(documentInput, restrictedStoredFieldVisitor, fieldInfo, bits, cv);
-            break;
-        case NO:
+          DelegatingRestrictedFieldVisitor.wrap(visitor);
+      if(evaluate(cv)) {
+          switch (restrictedStoredFieldVisitor.needsField(fieldInfo, cv)) {
+              case YES:
+                  readField(documentInput, restrictedStoredFieldVisitor,
+                            fieldInfo, bits, cv);
+                  break;
+              case NO:
+                  skipField(documentInput, bits, cv);
+                  break;
+              case STOP:
+                  return;
+          }
+      } else {
           skipField(documentInput, bits, cv);
-          break;
-        case STOP:
-          return;
       }
     }
   }
 
-  @Override
+    private boolean evaluate(ColumnVisibility cv) {
+        try {
+            final AuthorizationsHolder authorizationsHolder
+              = AuthorizationsHolder.threadAuthorizations.get();
+            return ALLAUTHSHOLDER.equals(authorizationsHolder) ||
+                   authorizationsHolder.getVisibilityEvaluator().evaluate(cv);
+        } catch (VisibilityParseException e) {
+            //ignore for now
+        }
+        return false;
+    }
+
+    @Override
   public StoredFieldsReader clone() {
     ensureOpen();
     return new CompressingStoredFieldsReader(this);

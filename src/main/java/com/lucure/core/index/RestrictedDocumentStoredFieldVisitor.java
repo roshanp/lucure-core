@@ -20,17 +20,16 @@ public class RestrictedDocumentStoredFieldVisitor extends
     private final Set<String> fieldsToAdd;
 
     public RestrictedDocumentStoredFieldVisitor(
-      Set<String> fieldsToAdd, VisibilityEvaluator visibilityEvaluator) {
-        super(visibilityEvaluator);
+      Set<String> fieldsToAdd) {
         this.fieldsToAdd = fieldsToAdd;
     }
 
-    public RestrictedDocumentStoredFieldVisitor(VisibilityEvaluator visibilityEvaluator, String... fields) {
-        this(Sets.newHashSet(fields), visibilityEvaluator);
+    public RestrictedDocumentStoredFieldVisitor(String... fields) {
+        this(Sets.newHashSet(fields));
     }
 
-    public RestrictedDocumentStoredFieldVisitor(VisibilityEvaluator visibilityEvaluator) {
-        this(null, visibilityEvaluator);
+    public RestrictedDocumentStoredFieldVisitor() {
+        this((Set<String>) null);
     }
 
     @Override
@@ -71,11 +70,7 @@ public class RestrictedDocumentStoredFieldVisitor extends
 
     @Override
     public Status needsField(FieldInfo fieldInfo, ColumnVisibility columnVisibility) throws IOException {
-        boolean addField = fieldsToAdd == null || fieldsToAdd.contains(fieldInfo.name);
-        if(!addField) {
-            return Status.NO;
-        }
-        return super.needsField(fieldInfo, columnVisibility);
+        return fieldsToAdd == null || fieldsToAdd.contains(fieldInfo.name) ? Status.YES : Status.NO;
     }
 
     /**

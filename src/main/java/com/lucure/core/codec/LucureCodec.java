@@ -50,13 +50,6 @@ public class LucureCodec extends Codec {
   private final FieldInfosFormat fieldInfosFormat = new Lucene46FieldInfosFormat();
   private final SegmentInfoFormat segmentInfosFormat = new Lucene46SegmentInfoFormat();
   private final LiveDocsFormat liveDocsFormat = new Lucene40LiveDocsFormat();
-  
-  private final PostingsFormat postingsFormat = new PerFieldPostingsFormat() {
-    @Override
-    public PostingsFormat getPostingsFormatForField(String field) {
-      return LucureCodec.this.getPostingsFormatForField(field);
-    }
-  };
 
   /** Sole constructor. */
   public LucureCodec() {
@@ -75,7 +68,7 @@ public class LucureCodec extends Codec {
 
   @Override
   public final PostingsFormat postingsFormat() {
-    return postingsFormat;
+    return defaultFormat;
   }
   
   @Override
@@ -91,15 +84,6 @@ public class LucureCodec extends Codec {
   @Override
   public final LiveDocsFormat liveDocsFormat() {
     return liveDocsFormat;
-  }
-
-  /** Returns the postings format that should be used for writing 
-   *  new segments of <code>field</code>.
-   *  
-   *  The default implementation always returns "Lucene41"
-   */
-  public PostingsFormat getPostingsFormatForField(String field) {
-    return defaultFormat;
   }
   
   @Override

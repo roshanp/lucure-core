@@ -11,12 +11,17 @@ import java.io.IOException;
  */
 public class DelegatingRestrictedFieldVisitor extends RestrictedStoredFieldVisitor {
 
+    public static RestrictedStoredFieldVisitor wrap(
+      StoredFieldVisitor visitor) {
+        return visitor instanceof RestrictedStoredFieldVisitor ?
+               (RestrictedStoredFieldVisitor) visitor :
+               new DelegatingRestrictedFieldVisitor(visitor);
+    }
+
     private final StoredFieldVisitor storedFieldVisitor;
 
     public DelegatingRestrictedFieldVisitor(
-      StoredFieldVisitor storedFieldVisitor,
-      VisibilityEvaluator visibilityEvaluator) {
-        super(visibilityEvaluator);
+      StoredFieldVisitor storedFieldVisitor) {
         this.storedFieldVisitor = storedFieldVisitor;
     }
 
@@ -70,6 +75,6 @@ public class DelegatingRestrictedFieldVisitor extends RestrictedStoredFieldVisit
         if(status == Status.STOP || status == Status.NO) {
             return status;
         }
-        return super.needsField(fieldInfo, columnVisibility);
+        return Status.YES;
     }
 }

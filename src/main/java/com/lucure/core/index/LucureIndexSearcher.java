@@ -40,6 +40,11 @@ public class LucureIndexSearcher extends IndexSearcher {
                   return indexReader;
               }
 
+//              if(indexReader instanceof DirectoryReader) {
+//                  return new LucureDirectoryReader(
+//                    (DirectoryReader) indexReader);
+//              }
+
               if(indexReader instanceof AtomicReader) {
                   return new LucureAtomicReader((AtomicReader) indexReader);
               }
@@ -85,9 +90,7 @@ public class LucureIndexSearcher extends IndexSearcher {
     public void doc(int docID, StoredFieldVisitor fieldVisitor, Authorizations authorizations) throws IOException {
         AuthorizationsHolder authorizationsHolder = new AuthorizationsHolder(authorizations);
         threadAuthorizations.set(authorizationsHolder);
-        super.doc(docID, new DelegatingRestrictedFieldVisitor(fieldVisitor,
-                                                              authorizationsHolder
-                                                                .getVisibilityEvaluator()));
+        super.doc(docID, DelegatingRestrictedFieldVisitor.wrap(fieldVisitor));
     }
 
     /**
@@ -98,9 +101,7 @@ public class LucureIndexSearcher extends IndexSearcher {
         AuthorizationsHolder authorizationsHolder = new AuthorizationsHolder(authorizations);
         threadAuthorizations.set(authorizationsHolder);
         RestrictedDocumentStoredFieldVisitor documentStoredFieldVisitor =
-          new RestrictedDocumentStoredFieldVisitor(fieldsToLoad,
-                                                   authorizationsHolder
-                                                     .getVisibilityEvaluator());
+          new RestrictedDocumentStoredFieldVisitor(fieldsToLoad);
         super.doc(docID, documentStoredFieldVisitor);
         return documentStoredFieldVisitor.getDocument();
     }

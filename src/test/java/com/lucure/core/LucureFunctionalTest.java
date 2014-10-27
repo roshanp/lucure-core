@@ -299,7 +299,8 @@ public class LucureFunctionalTest {
             BooleanQuery booleanQuery = new BooleanQuery();
             booleanQuery.add(new BooleanClause(new TermQuery(restrictedTerm),
                                                BooleanClause.Occur.SHOULD));
-            TopDocs search = indexSearcher.search(booleanQuery, 10, authorizations);
+            TopDocs search = indexSearcher.search(booleanQuery, 10,
+                                                  authorizations);
             ScoreDoc[] scoreDocs = search.scoreDocs;
             assertEquals(2, scoreDocs.length);
             //should only see the name field available though
@@ -356,6 +357,54 @@ public class LucureFunctionalTest {
     @Test
     public void testAuths_queryRestrictedFieldWithParserAdmin()
       throws Exception {
+
+        try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
+            LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);
+            //Q: query for someone's address as employee
+            //A: Since address is queryable as an employee, it should return
+            Authorizations authorizations = new Authorizations(ADMINS_GROUP);
+            QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
+                                                               ADDRESS_FIELD,
+                                                               analyzer,
+                                                               authorizations);
+            Query query = parser.parse("Address");
+
+            TopDocs search = indexSearcher.search(query, 10);
+            ScoreDoc[] scoreDocs = search.scoreDocs;
+            assertEquals(2, scoreDocs.length);
+            //should only see the name field available though
+            for (ScoreDoc scoreDoc : scoreDocs) {
+                Document document = indexSearcher.doc(scoreDoc.doc,
+                                                      authorizations);
+                assertEquals(7, document.getFields().size());
+                Set<String> names = new HashSet<>();
+                for (IndexableField field : document) {
+                    names.add(field.name());
+                }
+                assertEquals(7, names.size());
+                assertTrue(names.contains(NAME_FIELD));
+                assertTrue(names.contains(ADDRESS_FIELD));
+                assertTrue(names.contains(PHONE_FIELD));
+                assertTrue(names.contains(AGE_FIELD));
+                assertTrue(names.contains(SSN_FIELD));
+                assertTrue(names.contains(EMPLOYEEID_FIELD));
+                assertTrue(names.contains(DESCRIPTION_FIELD));
+            }
+        }
+    }
+
+    @Test
+    public void testMerge_Auths_queryRestrictedFieldWithParserAdmin()
+      throws Exception {
+
+        IndexWriterConfig conf = new IndexWriterConfig(LUCENE_VERSION,
+                                                       analyzer);
+        conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+        conf.setCodec(new LucureCodec());
+        final IndexWriter indexWriter = new IndexWriter(ramDirectory,
+                                                        conf);
+        indexWriter.forceMerge(1);
+        indexWriter.close();
 
         try (DirectoryReader open = DirectoryReader.open(ramDirectory)) {
             LucureIndexSearcher indexSearcher = new LucureIndexSearcher(open);

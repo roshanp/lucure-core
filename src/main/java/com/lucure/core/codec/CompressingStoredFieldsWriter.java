@@ -329,6 +329,8 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
     int docCount = 0;
     int idx = 0;
 
+      AccessFilteredDocsAndPositionsEnum.enableMergeAuthorizations();
+
     for (AtomicReader reader : mergeState.readers) {
       final SegmentReader matchingSegmentReader = mergeState.matchingSegmentReaders[idx++];
       CompressingStoredFieldsReader matchingFieldsReader = null;
@@ -392,6 +394,9 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
         }
       }
     }
+
+      AccessFilteredDocsAndPositionsEnum.disableMergeAuthorizations();
+
     finish(mergeState.fieldInfos, docCount);
     return docCount;
   }

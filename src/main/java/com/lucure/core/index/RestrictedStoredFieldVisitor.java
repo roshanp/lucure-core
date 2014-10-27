@@ -1,18 +1,12 @@
 package com.lucure.core.index;
 
 import com.lucure.core.security.ColumnVisibility;
-import com.lucure.core.security.VisibilityEvaluator;
-import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.regex.PatternSyntaxException;
-
-import static org.apache.lucene.index.StoredFieldVisitor.Status.*;
 
 /**
  */
@@ -20,14 +14,9 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
 
     private static final Logger LOG = LoggerFactory.getLogger(RestrictedStoredFieldVisitor.class);
 
-    public static final String CV_ATTR_NAME = "cv";
     public static final ColumnVisibility EMPTY = new ColumnVisibility();
 
-    private final VisibilityEvaluator visibilityEvaluator;
-
-    public RestrictedStoredFieldVisitor(
-      VisibilityEvaluator visibilityEvaluator) {
-        this.visibilityEvaluator = visibilityEvaluator;
+    public RestrictedStoredFieldVisitor() {
     }
 
     @Override
@@ -89,37 +78,10 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
 
     @Override
     public Status needsField(FieldInfo fieldInfo) throws IOException {
-        ColumnVisibility columnVisibility = getColumnVisibility(fieldInfo);
-        return needsField(fieldInfo, columnVisibility);
+        return needsField(fieldInfo, EMPTY);
     }
 
-    public Status needsField(
+    public abstract Status needsField(
       FieldInfo fieldInfo, ColumnVisibility columnVisibility)
-      throws IOException {
-        boolean hasAccess = true;
-        try{
-            hasAccess = visibilityEvaluator.evaluate(columnVisibility);
-        } catch (VisibilityParseException e) {
-            LOG.warn("Exception occurred parsing column visibility["+columnVisibility+"]", e);
-
-        }
-        return hasAccess ? YES : NO;
-    }
-
-    private ColumnVisibility getColumnVisibility(FieldInfo fieldInfo) {
-        Map<String, String> attributes = fieldInfo.attributes();
-        ColumnVisibility cv = EMPTY;
-        if(attributes != null) {
-            String cv_str = attributes.get(CV_ATTR_NAME);
-            if(cv_str != null) {
-                try {
-                    cv = new ColumnVisibility(cv_str);
-                } catch(PatternSyntaxException pe) {
-                    //ignore unparseable
-                    LOG.warn("Unparseable Column Visibility["+cv_str+"]", pe);
-                }
-            }
-        }
-        return cv;
-    }
+      throws IOException;
 }

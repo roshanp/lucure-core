@@ -20,19 +20,11 @@ package com.lucure.core.codec;
 
 import java.io.IOException;
 
-import org.apache.lucene.codecs.CodecUtil;
-import org.apache.lucene.codecs.FieldsConsumer;
-import org.apache.lucene.codecs.FieldsProducer;
-import org.apache.lucene.codecs.MultiLevelSkipListWriter;
-import org.apache.lucene.codecs.PostingsFormat;
-import org.apache.lucene.codecs.PostingsReaderBase;
-import org.apache.lucene.codecs.PostingsWriterBase;
+import org.apache.lucene.codecs.*;
 import org.apache.lucene.codecs.blocktree.BlockTreeTermsReader;
 import org.apache.lucene.codecs.blocktree.BlockTreeTermsWriter;
-import org.apache.lucene.index.DocsEnum;
+import org.apache.lucene.index.*;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
-import org.apache.lucene.index.SegmentReadState;
-import org.apache.lucene.index.SegmentWriteState;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.packed.PackedInts;
@@ -355,6 +347,42 @@ import org.apache.lucene.util.packed.PackedInts;
  */
 
 public final class LucurePostingsFormat extends PostingsFormat {
+
+    /**
+     * FieldsConsumer that will perform the merge operation correctly,
+     * by providing all auths on the merge operation of the postings format
+     */
+    private static class LucureMergingFieldsConsumer extends FieldsConsumer {
+
+        private final FieldsConsumer delegateFieldsConsumer;
+
+        private LucureMergingFieldsConsumer(
+          FieldsConsumer delegateFieldsConsumer) {
+            this.delegateFieldsConsumer = delegateFieldsConsumer;
+        }
+
+        @Override
+        public TermsConsumer addField(
+          FieldInfo field) throws IOException {
+            return delegateFieldsConsumer.addField(field);
+        }
+
+        @Override
+        public void close() throws IOException {
+            delegateFieldsConsumer.close();
+        }
+
+        @Override
+        public void merge(
+          MergeState mergeState, Fields fields) throws IOException {
+
+            AccessFilteredDocsAndPositionsEnum.enableMergeAuthorizations();
+            super.merge(mergeState, fields);
+            AccessFilteredDocsAndPositionsEnum.disableMergeAuthorizations();
+
+        }
+    }
+
   /**
    * Filename extension for document number, frequencies, and skip data.
    * See chapter: <a href="#Frequencies">Frequencies and Skip Data</a>
@@ -417,7 +445,7 @@ public final class LucurePostingsFormat extends PostingsFormat {
                                                     minTermBlockSize, 
                                                     maxTermBlockSize);
       success = true;
-      return ret;
+      return new LucureMergingFieldsConsumer(ret);
     } finally {
       if (!success) {
         IOUtils.closeWhileHandlingException(postingsWriter);

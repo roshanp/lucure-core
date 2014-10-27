@@ -18,10 +18,6 @@ package com.lucure.core.codec;
  */
 
 
-import com.lucure.core.AuthorizationsHolder;
-import com.lucure.core.security.ColumnVisibility;
-import com.lucure.core.security.VisibilityEvaluator;
-import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.BlockTermState;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.PostingsReaderBase;
@@ -31,7 +27,10 @@ import org.apache.lucene.store.DataInput;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
-import org.apache.lucene.util.*;
+import org.apache.lucene.util.ArrayUtil;
+import org.apache.lucene.util.Bits;
+import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.IOUtils;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -49,104 +48,6 @@ import static com.lucure.core.codec.LucurePostingsWriter.IntBlockTermState;
  * @lucene.experimental
  */
 public final class LucurePostingsReader extends PostingsReaderBase {
-
-    private static class AccessFilteredDocsAndPositionsEnum extends DocsAndPositionsEnum {
-
-        private final DocsAndPositionsEnum docsAndPositionsEnum;
-        private final VisibilityEvaluator visibilityEvaluator;
-
-        private AccessFilteredDocsAndPositionsEnum(
-          DocsAndPositionsEnum docsAndPositionsEnum) {
-            this.docsAndPositionsEnum = docsAndPositionsEnum;
-
-            this.visibilityEvaluator =
-              AuthorizationsHolder.threadAuthorizations.get()
-                                                       .getVisibilityEvaluator();
-        }
-
-        @Override
-        public int nextPosition() throws IOException {
-            return docsAndPositionsEnum.nextPosition();
-        }
-
-        @Override
-        public int startOffset() throws IOException {
-            return docsAndPositionsEnum.startOffset();
-        }
-
-        @Override
-        public int endOffset() throws IOException {
-            return docsAndPositionsEnum.endOffset();
-        }
-
-        @Override
-        public BytesRef getPayload() throws IOException {
-            return docsAndPositionsEnum.getPayload();
-        }
-
-        @Override
-        public int freq() throws IOException {
-            return docsAndPositionsEnum.freq();
-        }
-
-        @Override
-        public int docID() {
-            return docsAndPositionsEnum.docID();
-        }
-
-        @Override
-        public int nextDoc() throws IOException {
-            try {
-                while (docsAndPositionsEnum.nextDoc() != NO_MORE_DOCS) {
-                    if (hasAccess()) {
-                        return docID();
-                    }
-                }
-                return NO_MORE_DOCS;
-            } catch (VisibilityParseException vpe) {
-                throw new IOException("Exception occurred parsing visibility", vpe);
-            }
-        }
-
-        @Override
-        public int advance(int target) throws IOException {
-            int advance = docsAndPositionsEnum.advance(target);
-            if(advance != NO_MORE_DOCS) {
-                try {
-                    if (hasAccess()) {
-                        return docID();
-                    } else {
-                        //seek to next available
-                        int doc;
-                        while ((doc = nextDoc()) < target) {
-                        }
-                        return doc;
-                    }
-                } catch (VisibilityParseException vpe) {
-                    throw new IOException(
-                      "Exception occurred parsing visibility", vpe);
-                }
-            }
-            return NO_MORE_DOCS;
-        }
-
-        @Override
-        public long cost() {
-            return docsAndPositionsEnum.cost();
-        }
-
-        public boolean hasAccess() throws IOException, VisibilityParseException {
-            docsAndPositionsEnum.nextPosition();
-            BytesRef payload = docsAndPositionsEnum.getPayload();
-            return payload == null || this.visibilityEvaluator.evaluate(
-              new ColumnVisibility(Arrays.copyOfRange(payload.bytes, payload.offset, payload.offset + payload.length)));
-        }
-
-        @Override
-        public AttributeSource attributes() {
-            return super.attributes();
-        }
-    }
 
   private final IndexInput docIn;
   private final IndexInput posIn;
@@ -338,7 +239,6 @@ public final class LucurePostingsReader extends PostingsReaderBase {
       } else {
         docsAndPositionsEnum = new BlockDocsAndPositionsEnum(fieldInfo);
       }
-//      return docsAndPositionsEnum.reset(liveDocs, (IntBlockTermState) termState);
       return new AccessFilteredDocsAndPositionsEnum(docsAndPositionsEnum.reset(liveDocs, (IntBlockTermState) termState));
     } else {
       EverythingEnum everythingEnum;
@@ -350,7 +250,6 @@ public final class LucurePostingsReader extends PostingsReaderBase {
       } else {
         everythingEnum = new EverythingEnum(fieldInfo);
       }
-//      return everythingEnum.reset(liveDocs, (IntBlockTermState) termState, flags);
       return new AccessFilteredDocsAndPositionsEnum(everythingEnum.reset(liveDocs, (IntBlockTermState) termState, flags));
     }
   }

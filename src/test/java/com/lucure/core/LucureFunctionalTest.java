@@ -4,7 +4,7 @@ import com.lucure.core.codec.LucureCodec;
 import com.lucure.core.index.LucureIndexSearcher;
 import com.lucure.core.query.AuthorizationsQueryParser;
 import com.lucure.core.security.Authorizations;
-import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -41,10 +41,10 @@ public class LucureFunctionalTest {
     public static final String EMPLOYEES_GROUP = "employees";
 
     //cvs
-    public static final ColumnVisibility ADMINS_CV = new ColumnVisibility(
+    public static final FieldVisibility ADMINS_CV = new FieldVisibility(
       ADMINS_GROUP);
-    public static final ColumnVisibility ADMINS_EMPLOYEES_CV =
-      new ColumnVisibility(ADMINS_GROUP + "|" + EMPLOYEES_GROUP);
+    public static final FieldVisibility ADMINS_EMPLOYEES_CV =
+      new FieldVisibility(ADMINS_GROUP + "|" + EMPLOYEES_GROUP);
 
     //fields
     public static final String NAME_FIELD = "name";

@@ -72,11 +72,11 @@ public class VisibilityEvaluator {
     return new Authorizations(auths.getAuthorizations());
   }
   
-  public boolean evaluate(ColumnVisibility visibility) throws VisibilityParseException {
+  public boolean evaluate(FieldVisibility visibility) throws VisibilityParseException {
     return evaluate(visibility.getExpression(), visibility.getParseTree());
   }
   
-  private final boolean evaluate(final byte[] expression, final ColumnVisibility.Node root) throws VisibilityParseException {
+  private final boolean evaluate(final byte[] expression, final FieldVisibility.Node root) throws VisibilityParseException {
     if(expression.length == 0)
       return true;
     switch (root.type) {
@@ -85,7 +85,7 @@ public class VisibilityEvaluator {
       case AND:
         if (root.children == null || root.children.size() < 2)
           throw new VisibilityParseException("AND has less than 2 children", expression, root.start);
-        for (ColumnVisibility.Node child : root.children) {
+        for (FieldVisibility.Node child : root.children) {
           if (!evaluate(expression, child))
             return false;
         }
@@ -93,7 +93,7 @@ public class VisibilityEvaluator {
       case OR:
         if (root.children == null || root.children.size() < 2)
           throw new VisibilityParseException("OR has less than 2 children", expression, root.start);
-        for (ColumnVisibility.Node child : root.children) {
+        for (FieldVisibility.Node child : root.children) {
           if (evaluate(expression, child))
             return true;
         }

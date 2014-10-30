@@ -20,10 +20,10 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
- * Validate the column visibility is a valid expression and set the visibility for a Mutation. See {@link ColumnVisibility#ColumnVisibility(byte[])} for the
+ * Validate the column visibility is a valid expression and set the visibility for a Mutation. See {@link FieldVisibility#FieldVisibility(byte[])} for the
  * definition of an expression.
  */
-public class ColumnVisibility {
+public class FieldVisibility {
   
   Node node = null;
   private byte[] expression;
@@ -359,9 +359,9 @@ public class ColumnVisibility {
   /**
    * Empty visibility. Normally, elements with empty visibility can be seen by everyone. Though, one could change this behavior with filters.
    * 
-   * @see #ColumnVisibility(String)
+   * @see #FieldVisibility(String)
    */
-  public ColumnVisibility() {
+  public FieldVisibility() {
     this(new byte[] {});
   }
   
@@ -403,16 +403,16 @@ public class ColumnVisibility {
    * </pre>
    * 
    */
-  public ColumnVisibility(String expression) {
+  public FieldVisibility(String expression) {
     this(expression.getBytes(Constants.UTF8));
   }
   
   /**
    * A convenience method for constructing from a string already encoded in UTF-8 bytes.
    * 
-   * @see #ColumnVisibility(String)
+   * @see #FieldVisibility(String)
    */
-  public ColumnVisibility(byte[] expression) {
+  public FieldVisibility(byte[] expression) {
     validate(expression);
   }
   
@@ -422,19 +422,19 @@ public class ColumnVisibility {
   }
   
   /**
-   * See {@link #equals(ColumnVisibility)}
+   * See {@link #equals(FieldVisibility)}
    */
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof ColumnVisibility)
-      return equals((ColumnVisibility) obj);
+    if (obj instanceof FieldVisibility)
+      return equals((FieldVisibility) obj);
     return false;
   }
   
   /**
    * Compares two ColumnVisibilities for string equivalence, not as a meaningful comparison of terms and conditions.
    */
-  public boolean equals(ColumnVisibility otherLe) {
+  public boolean equals(FieldVisibility otherLe) {
     return Arrays.equals(expression, otherLe.expression);
   }
   

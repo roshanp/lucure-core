@@ -20,7 +20,7 @@ package com.lucure.core.codec;
 import com.lucure.core.AuthorizationsHolder;
 import com.lucure.core.index.DelegatingRestrictedFieldVisitor;
 import com.lucure.core.index.RestrictedStoredFieldVisitor;
-import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.FieldVisibility;
 import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.StoredFieldsReader;
@@ -177,43 +177,43 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
 
   private static void readField(
     DataInput in, RestrictedStoredFieldVisitor visitor, FieldInfo info,
-    int bits, ColumnVisibility columnVisibility) throws IOException {
+    int bits, FieldVisibility fieldVisibility) throws IOException {
 
     switch (bits & TYPE_MASK) {
       case BYTE_ARR:
         int length = in.readVInt();
         byte[] data = new byte[length];
         in.readBytes(data, 0, length);
-        visitor.binaryField(info, data, columnVisibility);
+        visitor.binaryField(info, data, fieldVisibility);
         break;
       case STRING:
         length = in.readVInt();
         data = new byte[length];
         in.readBytes(data, 0, length);
-        visitor.stringField(info, new String(data, IOUtils.CHARSET_UTF_8), columnVisibility);
+        visitor.stringField(info, new String(data, IOUtils.CHARSET_UTF_8), fieldVisibility);
         break;
       case NUMERIC_INT:
           int intValue = in.readInt();
-          visitor.intField(info, intValue, columnVisibility);
+          visitor.intField(info, intValue, fieldVisibility);
         break;
       case NUMERIC_FLOAT:
           float floatValue = Float.intBitsToFloat(in.readInt());
-          visitor.floatField(info, floatValue, columnVisibility);
+          visitor.floatField(info, floatValue, fieldVisibility);
         break;
       case NUMERIC_LONG:
           long longValue = in.readLong();
-          visitor.longField(info, longValue, columnVisibility);
+          visitor.longField(info, longValue, fieldVisibility);
         break;
       case NUMERIC_DOUBLE:
           double doubleValue = Double.longBitsToDouble(in.readLong());
-          visitor.doubleField(info, doubleValue, columnVisibility);
+          visitor.doubleField(info, doubleValue, fieldVisibility);
         break;
       default:
         throw new AssertionError("Unknown type flag: " + Integer.toHexString(bits));
     }
   }
 
-  private static void skipField(DataInput in, int bits, ColumnVisibility cv) throws IOException {
+  private static void skipField(DataInput in, int bits, FieldVisibility cv) throws IOException {
     switch (bits & TYPE_MASK) {
       case BYTE_ARR:
       case STRING:
@@ -357,13 +357,13 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       assert bits <= NUMERIC_DOUBLE: "bits=" + Integer.toHexString(bits);
 
         //get restricted
-        ColumnVisibility cv = RestrictedStoredFieldVisitor.EMPTY;
+        FieldVisibility cv = RestrictedStoredFieldVisitor.EMPTY;
         boolean isRestricted = documentInput.readByte() == 1;
         if(isRestricted) {
             int cv_length = documentInput.readVInt();
             byte[] cv_bytes = new byte[cv_length];
             documentInput.readBytes(cv_bytes, 0, cv_length);
-            cv = new ColumnVisibility(cv_bytes);
+            cv = new FieldVisibility(cv_bytes);
         }
 
         RestrictedStoredFieldVisitor restrictedStoredFieldVisitor =
@@ -386,7 +386,7 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
     }
   }
 
-    private boolean evaluate(ColumnVisibility cv) {
+    private boolean evaluate(FieldVisibility cv) {
         try {
             final AuthorizationsHolder authorizationsHolder
               = AuthorizationsHolder.threadAuthorizations.get();

@@ -1,6 +1,6 @@
 package com.lucure.core.index;
 
-import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.slf4j.Logger;
@@ -14,7 +14,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
 
     private static final Logger LOG = LoggerFactory.getLogger(RestrictedStoredFieldVisitor.class);
 
-    public static final ColumnVisibility EMPTY = new ColumnVisibility();
+    public static final FieldVisibility EMPTY = new FieldVisibility();
 
     public RestrictedStoredFieldVisitor() {
     }
@@ -26,7 +26,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract void binaryField(
-      FieldInfo fieldInfo, byte[] value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, byte[] value, FieldVisibility fieldVisibility)
       throws IOException;
 
     @Override
@@ -35,7 +35,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract void stringField(
-      FieldInfo fieldInfo, String value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, String value, FieldVisibility fieldVisibility)
       throws IOException;
 
     @Override
@@ -44,7 +44,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract void intField(
-      FieldInfo fieldInfo, int value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, int value, FieldVisibility fieldVisibility)
       throws IOException;
 
     @Override
@@ -53,7 +53,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract void longField(
-      FieldInfo fieldInfo, long value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, long value, FieldVisibility fieldVisibility)
       throws IOException;
 
     @Override
@@ -63,7 +63,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract void floatField(
-      FieldInfo fieldInfo, float value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, float value, FieldVisibility fieldVisibility)
       throws IOException;
 
     @Override
@@ -73,7 +73,7 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract void doubleField(
-      FieldInfo fieldInfo, double value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, double value, FieldVisibility fieldVisibility)
       throws IOException;
 
     @Override
@@ -82,6 +82,6 @@ public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
     }
 
     public abstract Status needsField(
-      FieldInfo fieldInfo, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, FieldVisibility fieldVisibility)
       throws IOException;
 }

@@ -1,6 +1,6 @@
 package com.lucure.core;
 
-import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -18,7 +18,7 @@ public class RestrictedFieldTest {
         String visibility = "U";
         String value = "value";
         RestrictedField restrictedField = new RestrictedField(new StringField(
-          "field", value, Field.Store.NO), new ColumnVisibility(visibility));
+          "field", value, Field.Store.NO), new FieldVisibility(visibility));
         try(TokenStream tokenStream = restrictedField.tokenStream(
           new WhitespaceAnalyzer(), null)) {
             CharTermAttribute charTermAttribute = tokenStream
@@ -39,17 +39,17 @@ public class RestrictedFieldTest {
         String visibility = "U";
         String value = "value";
         RestrictedField restrictedField = new RestrictedField(new StringField(
-          "field", value, Field.Store.NO), new ColumnVisibility(visibility));
+          "field", value, Field.Store.NO), new FieldVisibility(visibility));
         assertTrue(restrictedField.equals(restrictedField));
         assertTrue(restrictedField.equals(new RestrictedField(new StringField(
-          "field", value, Field.Store.NO), new ColumnVisibility(visibility))));
+          "field", value, Field.Store.NO), new FieldVisibility(visibility))));
         assertFalse(restrictedField.equals(new RestrictedField(new StringField(
-          "field1", value, Field.Store.NO), new ColumnVisibility(visibility))));
+          "field1", value, Field.Store.NO), new FieldVisibility(visibility))));
         assertFalse(restrictedField.equals(new RestrictedField(new StringField(
-          "field", value, Field.Store.YES), new ColumnVisibility(visibility))));
+          "field", value, Field.Store.YES), new FieldVisibility(visibility))));
         assertFalse(restrictedField.equals(new RestrictedField(new StringField(
-          "field", "notVal", Field.Store.NO), new ColumnVisibility(visibility))));
+          "field", "notVal", Field.Store.NO), new FieldVisibility(visibility))));
         assertFalse(restrictedField.equals(new RestrictedField(new StringField(
-          "field", value, Field.Store.NO), new ColumnVisibility("U&FOUO"))));
+          "field", value, Field.Store.NO), new FieldVisibility("U&FOUO"))));
     }
 }

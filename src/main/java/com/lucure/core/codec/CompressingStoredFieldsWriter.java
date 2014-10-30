@@ -274,7 +274,7 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
       bufferedDocs.writeByte((byte) (isRestricted ? 1 : 0));
       if(isRestricted) {
           RestrictedField restrictedField = (RestrictedField) field;
-          byte[] expression = restrictedField.getColumnVisibility().getExpression();
+          byte[] expression = restrictedField.getFieldVisibility().getExpression();
           bufferedDocs.writeVInt(expression.length);
           bufferedDocs.writeBytes(expression, 0, expression.length);
       }

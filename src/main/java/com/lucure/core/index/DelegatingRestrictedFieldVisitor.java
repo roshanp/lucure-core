@@ -1,7 +1,6 @@
 package com.lucure.core.index;
 
-import com.lucure.core.security.ColumnVisibility;
-import com.lucure.core.security.VisibilityEvaluator;
+import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
 
@@ -27,49 +26,49 @@ public class DelegatingRestrictedFieldVisitor extends RestrictedStoredFieldVisit
 
     @Override
     public void binaryField(
-      FieldInfo fieldInfo, byte[] value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, byte[] value, FieldVisibility fieldVisibility)
       throws IOException {
         storedFieldVisitor.binaryField(fieldInfo, value);
     }
 
     @Override
     public void stringField(
-      FieldInfo fieldInfo, String value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, String value, FieldVisibility fieldVisibility)
       throws IOException {
         storedFieldVisitor.stringField(fieldInfo, value);
     }
 
     @Override
     public void intField(
-      FieldInfo fieldInfo, int value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, int value, FieldVisibility fieldVisibility)
       throws IOException {
         storedFieldVisitor.intField(fieldInfo, value);
     }
 
     @Override
     public void longField(
-      FieldInfo fieldInfo, long value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, long value, FieldVisibility fieldVisibility)
       throws IOException {
         storedFieldVisitor.longField(fieldInfo, value);
     }
 
     @Override
     public void floatField(
-      FieldInfo fieldInfo, float value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, float value, FieldVisibility fieldVisibility)
       throws IOException {
         storedFieldVisitor.floatField(fieldInfo, value);
     }
 
     @Override
     public void doubleField(
-      FieldInfo fieldInfo, double value, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, double value, FieldVisibility fieldVisibility)
       throws IOException {
         storedFieldVisitor.doubleField(fieldInfo, value);
     }
 
     @Override
     public Status needsField(
-      FieldInfo fieldInfo, ColumnVisibility columnVisibility)
+      FieldInfo fieldInfo, FieldVisibility fieldVisibility)
       throws IOException {
         Status status = storedFieldVisitor.needsField(fieldInfo);
         if(status == Status.STOP || status == Status.NO) {

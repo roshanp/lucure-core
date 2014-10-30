@@ -1,6 +1,6 @@
 package com.lucure.core;
 
-import com.lucure.core.security.ColumnVisibility;
+import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
@@ -16,7 +16,7 @@ import static com.lucure.core.util.IndexableFieldUtils.from;
 import static com.lucure.core.util.IndexableFieldUtils.toObject;
 
 /**
- * A RestrictedField provides a {@link com.lucure.core.security.ColumnVisibility} over
+ * A RestrictedField provides a {@link com.lucure.core.security.FieldVisibility} over
  * with a field. The visibility is encoded into the payload of the tokenStream when tokenized
  */
 public class RestrictedField extends Field {
@@ -25,19 +25,19 @@ public class RestrictedField extends Field {
       extends TokenFilter {
         private final PayloadAttribute payAtt = addAttribute(
           PayloadAttribute.class);
-        private final ColumnVisibility columnVisibility;
+        private final FieldVisibility fieldVisibility;
 
         public ColumnVisibilityPayloadFilter(
-          TokenStream input, ColumnVisibility columnVisibility) {
+          TokenStream input, FieldVisibility fieldVisibility) {
             super(input);
-            this.columnVisibility = columnVisibility;
+            this.fieldVisibility = fieldVisibility;
         }
 
         @Override
         public boolean incrementToken() throws IOException {
             if (input.incrementToken()) {
                 payAtt
-                  .setPayload(new BytesRef(columnVisibility.getExpression()));
+                  .setPayload(new BytesRef(fieldVisibility.getExpression()));
                 return true;
             } else {
                 return false;
@@ -45,38 +45,37 @@ public class RestrictedField extends Field {
         }
     }
 
-    private final ColumnVisibility columnVisibility;
+    private final FieldVisibility fieldVisibility;
 
     public RestrictedField(
       String name, Object value, FieldType type,
-      ColumnVisibility columnVisibility) {
+      FieldVisibility fieldVisibility) {
         super(name, type);
         this.fieldsData = value;
-        this.columnVisibility = columnVisibility;
+        this.fieldVisibility = fieldVisibility;
     }
 
-    public RestrictedField(Field field, ColumnVisibility columnVisibility) {
+    public RestrictedField(Field field, FieldVisibility fieldVisibility) {
         super(field.name(), field.fieldType());
         this.fieldsData = toObject(field);
-        this.columnVisibility = columnVisibility;
+        this.fieldVisibility = fieldVisibility;
     }
 
-    public RestrictedField(IndexableField field, ColumnVisibility columnVisibility) {
+    public RestrictedField(IndexableField field, FieldVisibility fieldVisibility) {
         super(field.name(), from(field.fieldType()));
         this.fieldsData = toObject(field);
-        this.columnVisibility = columnVisibility;
+        this.fieldVisibility = fieldVisibility;
     }
 
-    public ColumnVisibility getColumnVisibility() {
-        return columnVisibility;
+    public FieldVisibility getFieldVisibility() {
+        return fieldVisibility;
     }
 
     @Override
     public TokenStream tokenStream(Analyzer analyzer, TokenStream reuse)
       throws IOException {
         TokenStream tokenStream = super.tokenStream(analyzer, reuse);
-        tokenStream = new ColumnVisibilityPayloadFilter(tokenStream,
-                                                        columnVisibility);
+        tokenStream = new ColumnVisibilityPayloadFilter(tokenStream, fieldVisibility);
         return tokenStream;
     }
 
@@ -84,7 +83,7 @@ public class RestrictedField extends Field {
     public String toString() {
         return "RestrictedField{" +
                "super=" + super.toString() +
-               ", columnVisibility=" + columnVisibility +
+               ", columnVisibility=" + fieldVisibility +
                '}';
     }
 
@@ -109,9 +108,9 @@ public class RestrictedField extends Field {
             that.fieldsData != null) {
             return false;
         }
-        if (columnVisibility != null ?
-            !columnVisibility.equals(that.columnVisibility) :
-            that.columnVisibility != null) {
+        if (fieldVisibility != null ?
+            !fieldVisibility.equals(that.fieldVisibility) :
+            that.fieldVisibility != null) {
             return false;
         }
 
@@ -124,7 +123,7 @@ public class RestrictedField extends Field {
         result = 31 * result + (fieldsData != null ? fieldsData.hashCode() : 0);
         result = 31 * result + (type != null ? type.hashCode() : 0);
         result = 31 * result +
-                 (columnVisibility != null ? columnVisibility.hashCode() : 0);
+                 (fieldVisibility != null ? fieldVisibility.hashCode() : 0);
         return result;
     }
 }

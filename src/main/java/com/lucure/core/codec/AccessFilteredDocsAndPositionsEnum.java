@@ -2,8 +2,7 @@ package com.lucure.core.codec;
 
 import com.lucure.core.AuthorizationsHolder;
 import com.lucure.core.security.Authorizations;
-import com.lucure.core.security.ColumnVisibility;
-import com.lucure.core.security.VisibilityEvaluator;
+import com.lucure.core.security.FieldVisibility;
 import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.util.AttributeSource;
@@ -135,7 +134,7 @@ public class AccessFilteredDocsAndPositionsEnum extends DocsAndPositionsEnum {
         return payload == null ||
                ALLAUTHSHOLDER.equals(authorizationsHolder) ||
                this.authorizationsHolder.getVisibilityEvaluator().evaluate(
-                 new ColumnVisibility(Arrays.copyOfRange(payload.bytes,
+                 new FieldVisibility(Arrays.copyOfRange(payload.bytes,
                                                          payload.offset,
                                                          payload.offset +
                                                          payload.length)));

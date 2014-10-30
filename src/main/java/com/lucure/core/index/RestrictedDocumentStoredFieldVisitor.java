@@ -2,8 +2,7 @@ package com.lucure.core.index;
 
 import com.google.common.collect.Sets;
 import com.lucure.core.RestrictedField;
-import com.lucure.core.security.ColumnVisibility;
-import com.lucure.core.security.VisibilityEvaluator;
+import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.FieldInfo;
 
@@ -33,43 +32,43 @@ public class RestrictedDocumentStoredFieldVisitor extends
     }
 
     @Override
-    public void binaryField(FieldInfo fieldInfo, byte[] value, ColumnVisibility columnVisibility) throws
+    public void binaryField(FieldInfo fieldInfo, byte[] value, FieldVisibility fieldVisibility) throws
                                                                IOException {
-        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), columnVisibility));
+        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), fieldVisibility));
     }
 
     @Override
-    public void stringField(FieldInfo fieldInfo, String value, ColumnVisibility columnVisibility) throws IOException {
+    public void stringField(FieldInfo fieldInfo, String value, FieldVisibility fieldVisibility) throws IOException {
         final FieldType ft = new FieldType(TextField.TYPE_STORED);
         ft.setStoreTermVectors(fieldInfo.hasVectors());
         ft.setIndexed(fieldInfo.isIndexed());
         ft.setOmitNorms(fieldInfo.omitsNorms());
         ft.setIndexOptions(fieldInfo.getIndexOptions());
-        doc.add(new RestrictedField(new Field(fieldInfo.name, value, ft), columnVisibility));
+        doc.add(new RestrictedField(new Field(fieldInfo.name, value, ft), fieldVisibility));
     }
 
     @Override
-    public void intField(FieldInfo fieldInfo, int value, ColumnVisibility columnVisibility) {
-        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), columnVisibility));
+    public void intField(FieldInfo fieldInfo, int value, FieldVisibility fieldVisibility) {
+        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), fieldVisibility));
     }
 
     @Override
-    public void longField(FieldInfo fieldInfo, long value, ColumnVisibility columnVisibility) {
-        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), columnVisibility));
+    public void longField(FieldInfo fieldInfo, long value, FieldVisibility fieldVisibility) {
+        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), fieldVisibility));
     }
 
     @Override
-    public void floatField(FieldInfo fieldInfo, float value, ColumnVisibility columnVisibility) {
-        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), columnVisibility));
+    public void floatField(FieldInfo fieldInfo, float value, FieldVisibility fieldVisibility) {
+        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), fieldVisibility));
     }
 
     @Override
-    public void doubleField(FieldInfo fieldInfo, double value, ColumnVisibility columnVisibility) {
-        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), columnVisibility));
+    public void doubleField(FieldInfo fieldInfo, double value, FieldVisibility fieldVisibility) {
+        doc.add(new RestrictedField(new StoredField(fieldInfo.name, value), fieldVisibility));
     }
 
     @Override
-    public Status needsField(FieldInfo fieldInfo, ColumnVisibility columnVisibility) throws IOException {
+    public Status needsField(FieldInfo fieldInfo, FieldVisibility fieldVisibility) throws IOException {
         return fieldsToAdd == null || fieldsToAdd.contains(fieldInfo.name) ? Status.YES : Status.NO;
     }
 

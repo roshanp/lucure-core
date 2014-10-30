@@ -328,8 +328,7 @@ public class LucureFunctionalTest {
             //Q: query for someone's address as employee
             //A: Since address is queryable as an employee, it should return
             Authorizations authorizations = new Authorizations(EMPLOYEES_GROUP);
-            QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
-                                                               ADDRESS_FIELD,
+            QueryParser parser = new AuthorizationsQueryParser(ADDRESS_FIELD,
                                                                analyzer,
                                                                authorizations);
             Query query = parser.parse("Address");
@@ -363,8 +362,7 @@ public class LucureFunctionalTest {
             //Q: query for someone's address as employee
             //A: Since address is queryable as an employee, it should return
             Authorizations authorizations = new Authorizations(ADMINS_GROUP);
-            QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
-                                                               ADDRESS_FIELD,
+            QueryParser parser = new AuthorizationsQueryParser(ADDRESS_FIELD,
                                                                analyzer,
                                                                authorizations);
             Query query = parser.parse("Address");
@@ -411,8 +409,7 @@ public class LucureFunctionalTest {
             //Q: query for someone's address as employee
             //A: Since address is queryable as an employee, it should return
             Authorizations authorizations = new Authorizations(ADMINS_GROUP);
-            QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
-                                                               ADDRESS_FIELD,
+            QueryParser parser = new AuthorizationsQueryParser(ADDRESS_FIELD,
                                                                analyzer,
                                                                authorizations);
             Query query = parser.parse("Address");
@@ -449,8 +446,7 @@ public class LucureFunctionalTest {
             //Q: query for someone's address
             //A: Since address is a restricted field, nothing should return
             Authorizations authorizations = new Authorizations();
-            QueryParser parser = new AuthorizationsQueryParser(LUCENE_VERSION,
-                                                               ADDRESS_FIELD,
+            QueryParser parser = new AuthorizationsQueryParser(ADDRESS_FIELD,
                                                                analyzer,
                                                                authorizations);
             Query query = parser.parse("\"Temporary Address\"");

@@ -18,6 +18,12 @@ import java.util.Set;
  */
 public class AuthQuery extends Query {
 
+    public static AuthQuery wrap(Query query, Authorizations authorizations) {
+        return query instanceof AuthQuery ?
+               new AuthQuery(((AuthQuery) query).getInnerQuery(), authorizations) :
+               new AuthQuery(query, authorizations);
+    }
+
     private static class AuthWeight extends Weight {
 
         private final Weight weight;

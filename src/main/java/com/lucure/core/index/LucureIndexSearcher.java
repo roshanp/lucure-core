@@ -20,6 +20,8 @@ import java.util.concurrent.ExecutorService;
 import static com.lucure.core.AuthorizationsHolder.threadAuthorizations;
 
 /**
+ * {@link IndexSearcher} that wraps the methods with Lucure functionality such as
+ * wrapping with {@link AuthQuery}
  */
 public class LucureIndexSearcher extends IndexSearcher {
 
@@ -134,76 +136,76 @@ public class LucureIndexSearcher extends IndexSearcher {
 
     public TopDocs searchAfter(
       ScoreDoc after, Query query, int n, Authorizations authorizations) throws IOException {
-        return super.searchAfter(after, new AuthQuery(query, authorizations), n);
+        return super.searchAfter(after, AuthQuery.wrap(query, authorizations), n);
     }
 
 
     public TopDocs searchAfter(
       ScoreDoc after, Query query, Filter filter, int n, Authorizations authorizations) throws IOException {
-        return super.searchAfter(after, new AuthQuery(query, authorizations), filter, n);
+        return super.searchAfter(after, AuthQuery.wrap(query, authorizations), filter, n);
     }
 
 
     public TopDocs search(
       Query query, int n, Authorizations authorizations) throws IOException {
-        return super.search(new AuthQuery(query, authorizations), n);
+        return super.search(AuthQuery.wrap(query, authorizations), n);
     }
 
 
     public TopDocs search(
       Query query, Filter filter, int n, Authorizations authorizations) throws IOException {
-        return super.search(new AuthQuery(query, authorizations), filter, n);
+        return super.search(AuthQuery.wrap(query, authorizations), filter, n);
     }
 
 
     public void search(
       Query query, Filter filter, Collector results, Authorizations authorizations) throws IOException {
-        super.search(new AuthQuery(query, authorizations), filter, results);
+        super.search(AuthQuery.wrap(query, authorizations), filter, results);
     }
 
 
     public void search(
       Query query, Collector results, Authorizations authorizations) throws IOException {
-        super.search(new AuthQuery(query, authorizations), results);
+        super.search(AuthQuery.wrap(query, authorizations), results);
     }
 
 
     public TopFieldDocs search(
       Query query, Filter filter, int n, Sort sort, Authorizations authorizations) throws IOException {
-        return super.search(new AuthQuery(query, authorizations), filter, n, sort);
+        return super.search(AuthQuery.wrap(query, authorizations), filter, n, sort);
     }
 
 
     public TopFieldDocs search(
       Query query, Filter filter, int n, Sort sort, boolean doDocScores,
       boolean doMaxScore, Authorizations authorizations) throws IOException {
-        return super.search(new AuthQuery(query, authorizations), filter, n, sort, doDocScores, doMaxScore);
+        return super.search(AuthQuery.wrap(query, authorizations), filter, n, sort, doDocScores, doMaxScore);
     }
 
 
     public TopDocs searchAfter(
       ScoreDoc after, Query query, Filter filter, int n, Sort sort, Authorizations authorizations)
       throws IOException {
-        return super.searchAfter(after, new AuthQuery(query, authorizations), filter, n, sort);
+        return super.searchAfter(after, AuthQuery.wrap(query, authorizations), filter, n, sort);
     }
 
 
     public TopFieldDocs search(
       Query query, int n, Sort sort, Authorizations authorizations) throws IOException {
-        return super.search(new AuthQuery(query, authorizations), n, sort);
+        return super.search(AuthQuery.wrap(query, authorizations), n, sort);
     }
 
 
     public TopDocs searchAfter(
       ScoreDoc after, Query query, int n, Sort sort, Authorizations authorizations) throws IOException {
-        return super.searchAfter(after, new AuthQuery(query, authorizations), n, sort);
+        return super.searchAfter(after, AuthQuery.wrap(query, authorizations), n, sort);
     }
 
 
     public TopDocs searchAfter(
       ScoreDoc after, Query query, Filter filter, int n, Sort sort,
       boolean doDocScores, boolean doMaxScore, Authorizations authorizations) throws IOException {
-        return super.searchAfter(after, new AuthQuery(query, authorizations), filter, n, sort, doDocScores,
+        return super.searchAfter(after, AuthQuery.wrap(query, authorizations), filter, n, sort, doDocScores,
                                  doMaxScore);
     }
 

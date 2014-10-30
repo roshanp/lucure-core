@@ -1,4 +1,4 @@
-package com.lucure.core.index;
+package com.lucure.core.index.visitor;
 
 import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.index.FieldInfo;
@@ -10,6 +10,12 @@ import java.io.IOException;
  */
 public class DelegatingRestrictedFieldVisitor extends RestrictedStoredFieldVisitor {
 
+    /**
+     * Only wrap with a {@link DelegatingRestrictedFieldVisitor} if necessary
+     *
+     * @param visitor To wrap
+     * @return {@link RestrictedStoredFieldVisitor}
+     */
     public static RestrictedStoredFieldVisitor wrap(
       StoredFieldVisitor visitor) {
         return visitor instanceof RestrictedStoredFieldVisitor ?

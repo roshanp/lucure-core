@@ -3,6 +3,8 @@ package com.lucure.core.index;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.lucure.core.AuthorizationsHolder;
+import com.lucure.core.index.visitor.DelegatingRestrictedFieldVisitor;
+import com.lucure.core.index.visitor.RestrictedDocumentStoredFieldVisitor;
 import com.lucure.core.query.AuthQuery;
 import com.lucure.core.security.Authorizations;
 import org.apache.lucene.document.Document;

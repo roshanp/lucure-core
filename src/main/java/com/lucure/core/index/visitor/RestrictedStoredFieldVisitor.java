@@ -1,4 +1,4 @@
-package com.lucure.core.index;
+package com.lucure.core.index.visitor;
 
 import com.lucure.core.security.FieldVisibility;
 import org.apache.lucene.index.FieldInfo;
@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
+ * Visitor that will expose the {@link FieldVisibility} from the Lucure Stored Fields Format
  */
 public abstract class RestrictedStoredFieldVisitor extends StoredFieldVisitor {
 

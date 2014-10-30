@@ -1,4 +1,4 @@
-package com.lucure.core.index;
+package com.lucure.core.index.visitor;
 
 import com.google.common.collect.Sets;
 import com.lucure.core.RestrictedField;
@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
+ * Analog to {@link DocumentStoredFieldVisitor} that saves {@link com.lucure.core.RestrictedField}s
  */
 public class RestrictedDocumentStoredFieldVisitor extends
                                                   RestrictedStoredFieldVisitor {

@@ -1,5 +1,6 @@
 package com.lucure.core.index;
 
+import com.lucure.core.index.visitor.DelegatingRestrictedFieldVisitor;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.FilterAtomicReader;
 import org.apache.lucene.index.StoredFieldVisitor;

@@ -18,8 +18,8 @@ package com.lucure.core.codec;
  */
 
 import com.lucure.core.AuthorizationsHolder;
-import com.lucure.core.index.DelegatingRestrictedFieldVisitor;
-import com.lucure.core.index.RestrictedStoredFieldVisitor;
+import com.lucure.core.index.visitor.DelegatingRestrictedFieldVisitor;
+import com.lucure.core.index.visitor.RestrictedStoredFieldVisitor;
 import com.lucure.core.security.FieldVisibility;
 import com.lucure.core.security.VisibilityParseException;
 import org.apache.lucene.codecs.CodecUtil;
